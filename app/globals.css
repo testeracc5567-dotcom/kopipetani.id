@@ -5418,3 +5418,47 @@ img, video, svg { max-width: 100%; }
   .card, .prf__user-card, .prf__points-card, .ord-card,
   .toko-prod-card, .mbr-level-card { margin-left: 0 !important; margin-right: 0 !important; }
 }
+/* ===== RESPONSIVE v3 — rapiin Beranda & jarak di HP ===== */
+@media (max-width: 600px) {
+  /* Padding pinggir dikecilin biar konten lebih lega */
+  .wrap { padding-left: 16px !important; padding-right: 16px !important; }
+
+  /* ---- HERO (bagian video paling atas) ---- */
+  .khero { min-height: auto !important; }
+  .khero-content {
+    max-width: 100% !important;
+    padding: 80px 18px !important;   /* jarak atas-bawah pas, nggak kegedean */
+  }
+  .khero-eyebrow { font-size: 12px !important; letter-spacing: 1.2px !important; }
+  .khero-title {
+    font-size: 27px !important;
+    line-height: 1.25 !important;
+    margin-bottom: 12px !important;
+  }
+  .khero-desc { font-size: 15px !important; line-height: 1.6 !important; }
+  .khero-btn {
+    width: auto !important;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ---- Jarak antar section dirapetin ---- */
+  section, .page-section { padding-top: 34px !important; padding-bottom: 34px !important; }
+
+  /* ---- Judul section (Kategori Pilihan, dll) ---- */
+  .page-head h1, .section-title, .cat-title, .why-title { font-size: 23px !important; }
+  .eyebrow { font-size: 12px !important; }
+
+  /* ---- Semua deretan kartu jadi 1 kolom yang lega ---- */
+  .grid, .grid.grid-full,
+  .cat-grid, .categories-grid,
+  .why-grid, .feature-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+}
+
+/* Tablet: kartu 2 kolom, jangan kegedean */
+@media (min-width: 601px) and (max-width: 900px) {
+  .grid, .grid.grid-full {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
