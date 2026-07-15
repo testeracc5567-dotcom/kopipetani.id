@@ -5389,3 +5389,32 @@ img, video, svg { max-width: 100%; }
   .prf__sidebar-link { flex-basis: 100%; }
   .ord-id { font-size: 13px; }
 }
+/* ===== RESPONSIVE v2 — paksa full-width & rapetin jarak di HP ===== */
+@media (max-width: 600px) {
+  /* Kontainer utama isi penuh layar */
+  .wrap,
+  .container,
+  main > section,
+  .page-section {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Kurangi jarak vertikal berlebih */
+  section, .page-section { padding-top: 34px !important; padding-bottom: 34px !important; }
+
+  /* Hero jadi 1 kolom & teks pas */
+  .hero-inner, .hero__inner, .hero-grid, .hero-wrap {
+    grid-template-columns: 1fr !important;
+    display: block !important;
+  }
+  .hero-title, .khero-title { font-size: 26px !important; line-height: 1.25 !important; }
+
+  /* Kartu tidak mepet tepi */
+  .card, .prf__user-card, .prf__points-card, .ord-card,
+  .toko-prod-card, .mbr-level-card { margin-left: 0 !important; margin-right: 0 !important; }
+}
