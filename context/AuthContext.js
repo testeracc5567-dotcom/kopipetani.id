@@ -9,7 +9,7 @@ const DEFAULT_USER = {
   email: "waguri@email.com",
   role: "Pembeli",
   memberLevel: "bronze",
-  points: 1257,
+  points: 1257666,
   joinDate: "2024-01-15",
   avatar: null,
   phone: "+62 812 3456 7890",
@@ -77,7 +77,7 @@ export function AuthProvider({ children }) {
 
   const memberInfo = {
     bronze: {
-      label: "AgroBronze Member",
+      label: "Bronze Member",
       nextLevel: "Silver",
       pointsNeeded: 2500,
       color: "#CD7F32",

@@ -1,0 +1,20 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="KupAI">
+  <defs>
+    <linearGradient id="kupBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d8a86a"/>
+      <stop offset="1" stop-color="#a4703f"/>
+    </linearGradient>
+  </defs>
+  <line x1="32" y1="4" x2="32" y2="13" stroke="#7b573e" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="32" cy="4" r="3.2" fill="#e9b872"/>
+  <path d="M15 15 h34 l-3.2 33 a7 7 0 0 1 -7 6.3 h-13.6 a7 7 0 0 1 -7 -6.3 z"
+        fill="url(#kupBody)" stroke="#7b573e" stroke-width="1.5"/>
+  <path d="M49 21 h4.5 a7.5 7.5 0 0 1 0 15 h-3.2"
+        fill="none" stroke="#a4703f" stroke-width="4.5" stroke-linecap="round"/>
+  <rect x="20.5" y="23" width="23" height="16" rx="6.5" fill="#2a1b12"/>
+  <circle cx="27.5" cy="30.5" r="3.1" fill="#ffe0ad"/>
+  <circle cx="36.5" cy="30.5" r="3.1" fill="#ffe0ad"/>
+  <circle cx="28.6" cy="29.4" r="1" fill="#fff"/>
+  <circle cx="37.6" cy="29.4" r="1" fill="#fff"/>
+  <path d="M27.5 35.5 q4.5 3.2 9 0" fill="none" stroke="#ffe0ad" stroke-width="1.7" stroke-linecap="round"/>
+</svg>

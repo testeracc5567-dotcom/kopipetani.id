@@ -4,7 +4,7 @@ export default function WhySection() {
       <div className="wrap">
         <div className="center">
           <span className="eyebrow">Kenapa KopiPetani</span>
-          <h2>Mengapa Pilih KopiPetani?</h2>
+          <h2>Mengapa Pilih KopiPetani.id?</h2>
           <p>
             Kami merangkai pengalaman kopi premium yang mengutamakan rasa,
             keberlanjutan, dan manfaat nyata bagi petani lokal.

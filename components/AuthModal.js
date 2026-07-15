@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useUI } from "@/context/UIContext";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ export default function AuthModal() {
   const { login, register } = useAuth();
   const router = useRouter();
   const isMasuk = authTab === "masuk";
+  const [showPass, setShowPass] = useState(false);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -19,11 +20,13 @@ export default function AuthModal() {
     return () => document.removeEventListener("keydown", onKey);
   }, [closeAuth]);
 
+  if (!authOpen) return null;
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const elements = e.target.elements;
     const email = elements.email.value;
-    const name = isMasuk ? "Waguri" : (elements.fullname?.value || "Waguri");
+    const name = isMasuk ? "Waguri" : elements.fullname?.value || "Waguri";
 
     if (isMasuk) {
       login({ name, email });
@@ -41,111 +44,157 @@ export default function AuthModal() {
     router.push("/profil");
   };
 
+  const handleGoogle = () => {
+    login({ name: "Waguri", email: "waguri@email.com" });
+    closeAuth();
+    showOk("Berhasil!", "Kamu masuk pakai akun Google.");
+    router.push("/profil");
+  };
+
   return (
-    <div className={"modal" + (authOpen ? " open" : "")}> 
-      <div className="mcardbox auth-modal">
-        <button className="mclose" onClick={closeAuth} aria-label="Tutup">
+    <div className="auth-overlay" onClick={closeAuth}>
+      <div
+        className={`auth-modal ${isMasuk ? "is-masuk" : "is-daftar"}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button className="auth-close" onClick={closeAuth} aria-label="Tutup">
           ×
         </button>
 
-        <div className="auth-panel">
-          <aside className="auth-side">
-            <div className="auth-side-copy">
-              <span className="eyebrow auth-eyebrow">Masa depan komoditas</span>
-              <h2>Menghubungkan Bumi dengan Teknologi Finansial.</h2>
-            </div>
-          </aside>
-
-          <section className="auth-form-card">
-            <div className="auth-headline">
-              <div>
-                <p className="auth-label">{isMasuk ? "Masuk" : "Buat Akun Baru"}</p>
-                <p className="auth-subtitle">
-                  {isMasuk
-                    ? "Masuk untuk melanjutkan ke KopiPetani dan temukan biji kopi terbaik."
-                    : "Bergabunglah dengan ekosistem perdagangan komoditas terkini hari ini."}
-                </p>
+        <aside className="auth-side">
+          {isMasuk ? (
+            <div className="auth-side-inner">
+              <div className="auth-brand">
+                <span className="auth-brand-logo">☕</span>
+                <span className="auth-brand-name">KopiPetani</span>
               </div>
-              <div className="auth-tabs">
-                <button
-                  className={isMasuk ? "active" : ""}
-                  onClick={() => setAuthTab("masuk")}
-                  type="button"
-                >
-                  Masuk
-                </button>
-                <button
-                  className={!isMasuk ? "active" : ""}
-                  onClick={() => setAuthTab("daftar")}
-                  type="button"
-                >
-                  Daftar
-                </button>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="auth-form">
-              {!isMasuk && (
-                <div className="field">
-                  <label>Nama Lengkap</label>
-                  <input name="fullname" type="text" placeholder="John Doe" required />
-                </div>
-              )}
-
-              <div className="field">
-                <label>Email</label>
-                <input name="email" type="email" placeholder="nama@email.com" required />
-              </div>
-
-              <div className="field">
-                <label>Kata Sandi</label>
-                <input name="password" type="password" placeholder="••••••••" required />
-              </div>
-
-              {!isMasuk && (
-                <div className="field">
-                  <label>Konfirmasi Kata Sandi</label>
-                  <input name="confirmPassword" type="password" placeholder="••••••••" required />
-                </div>
-              )}
-
-              {!isMasuk && (
-                <label className="checkbox-field">
-                  <input type="checkbox" required />
-                  <span>
-                    Saya setuju dengan <strong>Syarat & Ketentuan</strong> serta <strong>Kebijakan Privasi</strong> KopiPetani.
-                  </span>
-                </label>
-              )}
-
-              <button className="btn auth-submit" type="submit">
-                {isMasuk ? "Masuk" : "Daftar Sekarang"}
-              </button>
-
-              <div className="auth-social">
-                <button className="social-btn" type="button">
-                  Google
-                </button>
-                <button className="social-btn" type="button">
-                  LinkedIn
-                </button>
-              </div>
-
-              <p className="auth-bottom-text">
-                {isMasuk ? "Belum punya akun? " : "Sudah punya akun? "}
-                <button
-                  type="button"
-                  className="link-btn"
-                  onClick={() => setAuthTab(isMasuk ? "daftar" : "masuk")}
-                >
-                  {isMasuk ? "Daftar" : "Masuk"}
-                </button>
+              <p className="auth-side-tag">Platform kopi petani lokal terpercaya.</p>
+              <p className="auth-side-desc">
+                Belanja biji kopi terbaik langsung dari petani — mudah, aman, dan
+                terjangkau, cuma di KopiPetani.
               </p>
-            </form>
-          </section>
+              <ul className="auth-feats">
+                <li>
+                  <span className="auth-feat-ic">⚡</span> Proses checkout cepat &amp; mudah
+                </li>
+                <li>
+                  <span className="auth-feat-ic">🛡️</span> Transaksi aman &amp; terpercaya
+                </li>
+                <li>
+                  <span className="auth-feat-ic">🌱</span> Kopi berkualitas dari petani terbaik
+                </li>
+              </ul>
+            </div>
+          ) : (
+            <div className="auth-side-inner">
+              <span className="auth-side-eyebrow">DARI HULU KE CANGKIR</span>
+              <h2 className="auth-side-title">
+                Menghubungkan Petani Kopi dengan Penikmatnya.
+              </h2>
+            </div>
+          )}
+        </aside>
+
+        <div className="auth-main">
+          <h2 className="auth-title">
+            {isMasuk ? "Selamat Datang Kembali" : "Buat Akun Baru"}
+          </h2>
+          <p className="auth-sub">
+            {isMasuk
+              ? "Masuk untuk melanjutkan ke KopiPetani dan temukan biji kopi terbaik."
+              : "Bergabunglah dengan komunitas pecinta kopi Nusantara hari ini."}
+          </p>
+
+          <form className="auth-form" onSubmit={handleSubmit}>
+            {!isMasuk && (
+              <div className="auth-field">
+                <label>Nama Lengkap</label>
+                <input name="fullname" type="text" placeholder="Nama kamu" required />
+              </div>
+            )}
+
+            <div className="auth-field">
+              <label>{isMasuk ? "Email atau Username" : "Email"}</label>
+              <input name="email" type="email" placeholder="nama@email.com" required />
+            </div>
+
+            {isMasuk ? (
+              <div className="auth-field">
+                <label>Password</label>
+                <div className="auth-pass">
+                  <input
+                    name="password"
+                    type={showPass ? "text" : "password"}
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="auth-eye"
+                    onClick={() => setShowPass((s) => !s)}
+                    aria-label="Lihat password"
+                  >
+                    {showPass ? "🙈" : "👁"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="auth-row2">
+                <div className="auth-field">
+                  <label>Kata Sandi</label>
+                  <input name="password" type="password" placeholder="••••••••" required />
+                </div>
+                <div className="auth-field">
+                  <label>Konfirmasi</label>
+                  <input name="confirm" type="password" placeholder="••••••••" required />
+                </div>
+              </div>
+            )}
+
+            {isMasuk ? (
+              <div className="auth-inline">
+                <label className="auth-check">
+                  <input type="checkbox" /> Ingat saya
+                </label>
+                <a
+                  href="#"
+                  className="auth-forgot"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  Lupa Password?
+                </a>
+              </div>
+            ) : (
+              <label className="auth-check auth-check--full">
+                <input type="checkbox" required /> Saya setuju dengan{" "}
+                <b>Syarat &amp; Ketentuan</b> serta <b>Kebijakan Privasi</b> KopiPetani.
+              </label>
+            )}
+
+            <button type="submit" className="auth-submit">
+              {isMasuk ? "Masuk Sekarang" : "Daftar Sekarang"}
+            </button>
+          </form>
+
+          <div className="auth-divider">
+            <span>atau lanjut dengan</span>
+          </div>
+
+          <button type="button" className="auth-google" onClick={handleGoogle}>
+            <span className="auth-google-g">G</span> Lanjut dengan Google
+          </button>
+
+          <p className="auth-switch">
+            {isMasuk ? "Belum punya akun? " : "Sudah punya akun? "}
+            <button
+              type="button"
+              onClick={() => setAuthTab(isMasuk ? "daftar" : "masuk")}
+            >
+              {isMasuk ? "Daftar" : "Masuk"}
+            </button>
+          </p>
         </div>
       </div>
     </div>
   );
 }
-

@@ -47,8 +47,12 @@ export default function BlogPostPage({ params }) {
             </div>
 
             {/* Cover Visual */}
-            <div className="blg-detail__cover" style={{ background: post.ph.c }}>
-              <span className="blg-detail__cover-em">{post.ph.em}</span>
+            <div className="blg-detail__cover">
+              <img
+                className="blg-detail__cover-img"
+                src={post.image}
+                alt={post.title}
+              />
             </div>
 
             {/* Body Content */}

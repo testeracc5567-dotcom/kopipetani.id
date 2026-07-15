@@ -2,18 +2,26 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useUI } from "@/context/UIContext";
 import { useShop } from "@/context/ShopContext";
 import { useAuth } from "@/context/AuthContext";
+import { products, rp } from "@/lib/data";
+import { getStoreProducts } from "@/lib/storeProducts";
+import AccountMenu from "@/components/AccountMenu";
 
 export default function Header() {
   const { count } = useCart();
   const { openAuth } = useUI();
-  const { query, setQuery } = useShop();
+  const { setQuery } = useShop();
   const { isLoggedIn } = useAuth();
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [term, setTerm] = useState("");
+  const [suggest, setSuggest] = useState([]);
+  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -21,15 +29,48 @@ export default function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const handleQuickSearch = (e) => {
-    setQuery(e.target.value);
-    document.getElementById("shop")?.scrollIntoView({ behavior: "smooth" });
+  // Gabungan produk toko + produk bawaan untuk pencarian
+  const allForSearch = () => {
+    let store = [];
+    try { store = getStoreProducts(); } catch (e) {}
+    return [...store, ...products];
   };
+
+  const runSuggest = (value) => {
+    const q = value.trim().toLowerCase();
+    if (!q) { setSuggest([]); return; }
+    const matches = allForSearch()
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.cat || "").toLowerCase().includes(q)
+      )
+      .slice(0, 6);
+    setSuggest(matches);
+  };
+
+  const onSearchChange = (e) => {
+    const v = e.target.value;
+    setTerm(v);
+    setQuery?.(v);
+    runSuggest(v);
+  };
+
+  const submitSearch = (e) => {
+    if (e) e.preventDefault();
+    const q = term.trim();
+    if (!q) return;
+    setFocused(false);
+    setSuggest([]);
+    router.push(`/cari?q=${encodeURIComponent(q)}`);
+  };
+
+  const closeSuggest = () => { setFocused(false); setSuggest([]); };
 
   const navLinks = [
     { href: "/menu", label: "Menu" },
-    { href: "/kategori", label: "Kategori" },
     { href: "/produk", label: "Belanja" },
+    { href: "/kategori", label: "Kategori" },
     { href: "/blog", label: "Blog" },
     { href: "/tentang-kami", label: "Tentang Kami" },
   ];
@@ -43,16 +84,16 @@ export default function Header() {
             <Link href="/" className="hdr__brand">
               <span className="hdr__logo">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
-                  <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
-                  <line x1="6" y1="2" x2="6" y2="4"/>
-                  <line x1="10" y1="2" x2="10" y2="4"/>
-                  <line x1="14" y1="2" x2="14" y2="4"/>
+                  <path d="M17 8h1a4 4 0 1 1 0 8h-1" />
+                  <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" />
+                  <line x1="6" y1="2" x2="6" y2="4" />
+                  <line x1="10" y1="2" x2="10" y2="4" />
+                  <line x1="14" y1="2" x2="14" y2="4" />
                 </svg>
               </span>
               <span className="hdr__name">
                 <span className="hdr__name-kopi">Kopi</span>
-                <span className="hdr__name-petani">Petani</span>
+                <span className="hdr__name-petani">Petani<span className="brand-id">.id</span></span>
               </span>
             </Link>
 
@@ -67,19 +108,51 @@ export default function Header() {
 
             {/* Actions */}
             <div className="hdr__actions">
-              <div className="hdr__search">
+              <form className="hdr__search" onSubmit={submitSearch}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="11" cy="11" r="7" />
                   <path d="m21 21-4-4" />
                 </svg>
                 <input
                   type="text"
-                  placeholder="Cari..."
-                  value={query}
-                  onChange={handleQuickSearch}
+                  placeholder="Cari produk..."
+                  value={term}
+                  onChange={onSearchChange}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setTimeout(() => setFocused(false), 150)}
                 />
-              </div>
-
+                {focused && term.trim() && (
+                  <div className="hdr__search-drop">
+                    {suggest.length === 0 ? (
+                      <div className="hdr__search-empty">Nggak ada produk "{term}"</div>
+                    ) : (
+                      <>
+                        {suggest.map((p) => (
+                          <Link
+                            key={p.id}
+                            href={`/produk/${p.id}`}
+                            className="hdr__search-item"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={closeSuggest}
+                          >
+                            <span className="hdr__search-item-img">
+                              {p.image ? <img src={p.image} alt={p.name} /> : <span>{p.ph?.em || "☕"}</span>}
+                            </span>
+                            <span className="hdr__search-item-info">
+                              <span className="hdr__search-item-name">{p.name}</span>
+                              <span className="hdr__search-item-cat">{p.cat}</span>
+                            </span>
+                            <span className="hdr__search-item-price">{rp(p.price)}</span>
+                          </Link>
+                        ))}
+                        <button type="submit" className="hdr__search-all">
+                          Lihat semua hasil untuk "{term}" →
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </form>
               <Link href="/keranjang" className="hdr__icon-btn" aria-label="Keranjang">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                   <path d="M6 6h15l-1.5 9h-12z" />
@@ -89,24 +162,7 @@ export default function Header() {
                 </svg>
                 {count > 0 && <span className="hdr__badge">{count}</span>}
               </Link>
-
-              {isLoggedIn ? (
-                <Link href="/profil" className="hdr__auth-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M20 21a8 8 0 1 0-16 0" />
-                  </svg>
-                  Masuk/Daftar
-                </Link>
-              ) : (
-                <button className="hdr__auth-btn" onClick={openAuth}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M20 21a8 8 0 1 0-16 0" />
-                  </svg>
-                  Masuk/Daftar
-                </button>
-              )}
+              <AccountMenu />
             </div>
 
             {/* Hamburger */}
@@ -133,37 +189,35 @@ export default function Header() {
           <Link href="/" className="hdr__brand" onClick={() => setMobileOpen(false)}>
             <span className="hdr__logo">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
-                <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
-                <line x1="6" y1="2" x2="6" y2="4"/>
-                <line x1="10" y1="2" x2="10" y2="4"/>
-                <line x1="14" y1="2" x2="14" y2="4"/>
+                <path d="M17 8h1a4 4 0 1 1 0 8h-1" />
+                <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" />
+                <line x1="6" y1="2" x2="6" y2="4" />
+                <line x1="10" y1="2" x2="10" y2="4" />
+                <line x1="14" y1="2" x2="14" y2="4" />
               </svg>
             </span>
             <span className="hdr__name">
               <span className="hdr__name-kopi">Kopi</span>
-              <span className="hdr__name-petani">Petani</span>
+              <span className="hdr__name-petani">Petani<span className="brand-id">.id</span></span>
             </span>
           </Link>
           <button className="hdr__mob-close" onClick={() => setMobileOpen(false)} aria-label="Tutup menu">✕</button>
         </div>
-
-        <div className="hdr__mob-search">
+        <form
+          className="hdr__mob-search"
+          onSubmit={(e) => { submitSearch(e); setMobileOpen(false); }}
+        >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="7" />
             <path d="m21 21-4-4" />
           </svg>
           <input
             type="text"
-            placeholder="Cari kopi..."
-            value={query}
-            onChange={(e) => {
-              handleQuickSearch(e);
-              setMobileOpen(false);
-            }}
+            placeholder="Cari produk..."
+            value={term}
+            onChange={onSearchChange}
           />
-        </div>
-
+        </form>
         <nav className="hdr__mob-nav">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href} className="hdr__mob-link" onClick={() => setMobileOpen(false)}>
@@ -171,7 +225,6 @@ export default function Header() {
             </Link>
           ))}
         </nav>
-
         <div className="hdr__mob-actions">
           <Link href="/keranjang" className="hdr__mob-cart" onClick={() => setMobileOpen(false)}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -183,14 +236,13 @@ export default function Header() {
             Keranjang
             {count > 0 && <span className="hdr__badge">{count}</span>}
           </Link>
-
           {isLoggedIn ? (
             <Link href="/profil" className="hdr__mob-auth" onClick={() => setMobileOpen(false)}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="8" r="4" />
                 <path d="M20 21a8 8 0 1 0-16 0" />
               </svg>
-              Masuk/Daftar
+              Akun Saya
             </Link>
           ) : (
             <button className="hdr__mob-auth" onClick={() => { openAuth(); setMobileOpen(false); }}>

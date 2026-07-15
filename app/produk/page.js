@@ -1,7 +1,14 @@
+"use client";
+
 import { products } from "@/lib/data";
 import ProductCard from "@/components/ProductCard";
+import { useStoreProducts } from "@/lib/storeProducts";
 
 export default function ProdukPage() {
+  const storeProducts = useStoreProducts();
+  // Produk toko ditaruh paling depan biar keliatan
+  const all = [...storeProducts, ...products];
+
   return (
     <main className="page-section">
       <div className="wrap">
@@ -12,9 +19,8 @@ export default function ProdukPage() {
             Lihat semua produk kopi dan perlengkapan yang tersedia untuk pemesanan.
           </p>
         </div>
-
         <div className="grid grid-full">
-          {products.map((product) => (
+          {all.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

@@ -4,9 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { categories, posts, popularPosts } from "@/lib/blogData";
 
+const INITIAL = 4;
+
 export default function BlogPage() {
   const [selectedCat, setSelectedCat] = useState("Semua");
   const [sortBy, setSortBy] = useState("Terbaru");
+  const [visible, setVisible] = useState(INITIAL);
 
   const filteredPosts = posts.filter(
     (post) => selectedCat === "Semua" || post.cat === selectedCat
@@ -21,6 +24,8 @@ export default function BlogPage() {
     return 0;
   });
 
+  const shownPosts = sortedPosts.slice(0, visible);
+
   return (
     <main className="blg">
       <div className="wrap">
@@ -31,18 +36,23 @@ export default function BlogPage() {
               <button
                 key={cat}
                 className={`blg__filter-btn${selectedCat === cat ? " active" : ""}`}
-                onClick={() => setSelectedCat(cat)}
+                onClick={() => {
+                  setSelectedCat(cat);
+                  setVisible(INITIAL);
+                }}
               >
                 {cat}
               </button>
             ))}
           </div>
-
           <div className="blg__sort">
             <span>Urutan:</span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setVisible(INITIAL);
+              }}
               className="blg__sort-select"
             >
               <option value="Terbaru">Terbaru</option>
@@ -55,35 +65,52 @@ export default function BlogPage() {
         <div className="blg__layout">
           {/* Left Column: Post List */}
           <div className="blg__posts">
-            {sortedPosts.length > 0 ? (
-              sortedPosts.map((post) => (
-                <article key={post.id} className="blg__card">
-                  <div className="blg__card-imgwrap">
-                    <Link href={`/blog/${post.id}`}>
-                      <div className="blg__ph" style={{ background: post.ph.c }}>
-                        <span className="blg__ph-em">{post.ph.em}</span>
-                        <small className="blg__ph-cat">{post.cat}</small>
-                      </div>
-                    </Link>
-                  </div>
-                  <div className="blg__card-body">
-                    <div className="blg__card-meta">
-                      <span className="blg__card-cat">{post.cat}</span>
-                      <span className="blg__card-dot">•</span>
-                      <span>{post.date}</span>
-                      <span className="blg__card-dot">•</span>
-                      <span>{post.author}</span>
+            {shownPosts.length > 0 ? (
+              <>
+                {shownPosts.map((post) => (
+                  <article key={post.id} className="blg__card">
+                    <div className="blg__card-imgwrap">
+                      <Link href={`/blog/${post.id}`}>
+                        <div className="blg__thumb">
+                          <img
+                            className="blg__thumb-img"
+                            src={post.image}
+                            alt={post.title}
+                          />
+                          <small className="blg__thumb-cat">{post.cat}</small>
+                        </div>
+                      </Link>
                     </div>
-                    <h2 className="blg__card-title">
-                      <Link href={`/blog/${post.id}`}>{post.title}</Link>
-                    </h2>
-                    <p className="blg__card-excerpt">{post.excerpt}</p>
-                    <Link href={`/blog/${post.id}`} className="blg__card-link">
-                      Baca Selengkapnya →
-                    </Link>
+                    <div className="blg__card-body">
+                      <div className="blg__card-meta">
+                        <span className="blg__card-cat">{post.cat}</span>
+                        <span className="blg__card-dot">•</span>
+                        <span>{post.date}</span>
+                        <span className="blg__card-dot">•</span>
+                        <span>{post.author}</span>
+                      </div>
+                      <h2 className="blg__card-title">
+                        <Link href={`/blog/${post.id}`}>{post.title}</Link>
+                      </h2>
+                      <p className="blg__card-excerpt">{post.excerpt}</p>
+                      <Link href={`/blog/${post.id}`} className="blg__card-link">
+                        Baca Selengkapnya →
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+
+                {visible < sortedPosts.length && (
+                  <div className="blg__more-wrap">
+                    <button
+                      className="blg__more-btn"
+                      onClick={() => setVisible((v) => v + 3)}
+                    >
+                      Berita Lainnya
+                    </button>
                   </div>
-                </article>
-              ))
+                )}
+              </>
             ) : (
               <div className="blg__no-results">
                 <h3>Belum ada artikel</h3>

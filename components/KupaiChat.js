@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { products } from "@/lib/data";
-import { chipsByMode, answer } from "@/lib/kupai";
+import { chipsByMode } from "@/lib/kupai";
 import { useCart } from "@/context/CartContext";
 
 export default function KupaiChat() {
@@ -49,13 +49,25 @@ export default function KupaiChat() {
     );
   };
 
-  const respond = (text) => {
+  const respond = async (text) => {
     setTyping(true);
-    setTimeout(() => {
+    const history = [...messages, { who: "me", text }].map((m) => ({
+      role: m.who === "bot" ? "assistant" : "user",
+      content: (m.html || m.text || "").replace(/<[^>]+>/g, " ").trim(),
+    }));
+    try {
+      const res = await fetch("/api/kupai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history }),
+      });
+      const data = await res.json();
       setTyping(false);
-      const [html, recId] = answer(text.toLowerCase());
-      botSay(html, recId);
-    }, 650);
+      botSay(data.reply);
+    } catch (e) {
+      setTyping(false);
+      botSay("Waduh, KupAI lagi susah nyambung ke server. Coba lagi ya.");
+    }
   };
 
   const ask = (chip) => {
@@ -80,13 +92,15 @@ export default function KupaiChat() {
         onClick={toggle}
         aria-label="Buka KupAI"
       >
-        <span className="em">☕</span>
+       <img className="kup-logo" src="/kupai-logo.svg" alt="KupAI" />
         <span className="lbl">KupAI</span>
       </button>
 
       <div className={"kup-panel" + (open ? " open" : "")}>
         <div className="kup-head">
-          <div className="av">☕</div>
+          <div className="av">
+  <img className="kup-logo" src="/kupai-logo.svg" alt="KupAI" />
+</div>
           <div className="ht">
             <b>KupAI</b>
             <small>Online</small>
