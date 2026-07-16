@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import Icon from "@/components/Icon";
 
 const links = [
-  { label: "Dashboard", href: "/profil", icon: "📊" },
-  { label: "Pesanan Saya", href: "/pesanan", icon: "📦" },
-  { label: "Toko Anda", href: "/toko", icon: "🏪" },
-  { label: "Hadiah Member", href: "/member", icon: "🎁" },
-  { label: "Pengaturan Akun", href: "/profil", icon: "⚙️" },
+  { label: "Dashboard", href: "/profil", icon: "dashboard" },
+  { label: "Pesanan Saya", href: "/pesanan", icon: "package" },
+  { label: "Toko Anda", href: "/toko", icon: "store" },
+  { label: "Hadiah Member", href: "/member", icon: "gift" },
+  { label: "Pengaturan Akun", href: "/profil", icon: "settings" },
 ];
 
 export default function AccountSidebar() {
@@ -39,18 +40,16 @@ export default function AccountSidebar() {
               href={link.href}
               className={`prf__sidebar-link${active ? " active" : ""}`}
             >
-              <span className="prf__sidebar-link-icon">{link.icon}</span>
+              <span className="prf__sidebar-link-icon">
+                <Icon name={link.icon} size={18} />
+              </span>
               {link.label}
             </Link>
           );
         })}
       </nav>
       <button className="prf__sidebar-logout" onClick={handleLogout}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-          <polyline points="16,17 21,12 16,7" />
-          <line x1="21" y1="12" x2="9" y2="12" />
-        </svg>
+        <Icon name="logout" size={16} />
         Logout
       </button>
     </aside>

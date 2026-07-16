@@ -1,9 +1,9 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { rp } from "@/lib/data";
 import { useCart } from "@/context/CartContext";
 import { useUI } from "@/context/UIContext";
+import Icon from "@/components/Icon";
 
 export default function CartDrawer() {
   const {
@@ -66,7 +66,13 @@ export default function CartDrawer() {
         <div className="dbody">
           {groupNames.length === 0 ? (
             <div className="cart-empty">
-              <div className="em">☕</div>
+              <div className="em">
+                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="8" cy="21" r="1" />
+                  <circle cx="19" cy="21" r="1" />
+                  <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+                </svg>
+              </div>
               Keranjang masih kosong.
               <br />
               Yuk pilih kopi &amp; hasil bumi terbaik!
@@ -131,12 +137,15 @@ export default function CartDrawer() {
 function CartItem({ product, onInc, onDec, onRemove }) {
   const { cart } = useCart();
   const qty = cart[product.id] || 0;
-
   return (
     <div className="citem">
       <div className="ci-img">
         <div className="php" style={{ background: product.ph.c }}>
-          {product.ph.em}
+          {product.image ? (
+            <img src={product.image} alt={product.name} />
+          ) : (
+            <Icon name={typeof product.icon === "string" ? product.icon : "coffee"} size={22} />
+          )}
         </div>
       </div>
       <div className="ci-main">

@@ -1,8 +1,8 @@
 "use client";
-
 import Link from "next/link";
 import { rp } from "@/lib/data";
 import { useCart } from "@/context/CartContext";
+import Icon from "@/components/Icon";
 
 function CartIcon() {
   return (
@@ -25,20 +25,22 @@ function CartIcon() {
 
 export default function ProductCard({ product }) {
   const { addToCart } = useCart();
-
   const rating =
     product.rating ?? (4.6 + ((product.id * 3) % 5) / 10).toFixed(1);
   const sold = product.sold ?? 50 + ((product.id * 37) % 400);
+
+  // Ada foto -> tampil foto. Produk toko tanpa foto -> tampil ikon SVG pilihannya.
+  const showPhoto = product.image && product.hasPhoto !== false;
 
   return (
     <div className="pc">
       <Link href={`/produk/${product.id}`} className="pc-img-link">
         <div className="pc-img">
-          {product.image ? (
+          {showPhoto ? (
             <img src={product.image} alt={product.name} />
           ) : (
             <div className="pc-ph" style={{ background: product.ph.c }}>
-              <span className="pc-ph-em">{product.ph.em}</span>
+              <Icon name={product.icon || "coffee"} size={46} className="pc-ph-ic" />
             </div>
           )}
           <span className="pc-badge">{product.cat}</span>

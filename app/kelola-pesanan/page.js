@@ -1,9 +1,9 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useOrders, updateOrderStatus, STATUS } from "@/lib/orders";
 import { rp } from "@/lib/data";
+import Icon from "@/components/Icon";
 
 const STATUS_STYLE = {
   [STATUS.PENDING]: { bg: "#fff4e5", fg: "#b26a00" },
@@ -27,7 +27,7 @@ function Items({ order }) {
     <div className="ord-items">
       {order.items.map((it) => (
         <div key={it.id} className="ord-item">
-          <span className="ord-item-em">{it.emoji}</span>
+          <span className="ord-item-em"><Icon name="coffee" size={16} /></span>
           <span className="ord-item-name">{it.name}</span>
           <span className="ord-item-qty">x{it.qty}</span>
           <span className="ord-item-price">{rp(it.price * it.qty)}</span>
@@ -39,7 +39,6 @@ function Items({ order }) {
 
 export default function KelolaPesananPage() {
   const orders = useOrders();
-
   const [hasStore, setHasStore] = useState(null);
   useEffect(() => {
     try {
@@ -55,7 +54,7 @@ export default function KelolaPesananPage() {
     return (
       <main className="ord-page">
         <div className="ord-empty">
-          <span className="ord-empty-em">🏪</span>
+          <span className="ord-empty-em"><Icon name="store" size={40} strokeWidth={1.6} /></span>
           <p>
             Kamu belum punya toko. Buka toko dulu buat mengelola pesanan yang
             masuk.
@@ -73,13 +72,12 @@ export default function KelolaPesananPage() {
       <div className="ord-head">
         <h1 className="ord-title">Kelola Pesanan</h1>
         <p className="ord-sub">
-          Panel penjual — atur status pesanan yang masuk ke toko kamu. 🏪
+          Panel penjual — atur status pesanan yang masuk ke toko kamu.
         </p>
       </div>
-
       {orders.length === 0 ? (
         <div className="ord-empty">
-          <span className="ord-empty-em">📭</span>
+          <span className="ord-empty-em"><Icon name="inbox" size={40} strokeWidth={1.6} /></span>
           <p>Belum ada pesanan masuk.</p>
         </div>
       ) : (
@@ -90,11 +88,18 @@ export default function KelolaPesananPage() {
                 <div>
                   <span className="ord-id">#{o.id}</span>
                   <span className="ord-date">{o.date}</span>
-                  <span className="ord-buyer">👤 {o.buyer}</span>
+                  <span className="ord-buyer"><Icon name="user" size={14} /> {o.buyer}</span>
                 </div>
                 <Badge status={o.status} />
               </div>
               <Items order={o} />
+              {o.address && (
+                <div className="ord-address">
+                  <p className="ord-address-title"><Icon name="map-pin" size={15} /> Kirim ke</p>
+                  <p className="ord-address-name">{o.address.name} · {o.address.phone}</p>
+                  <p className="ord-address-detail">{o.address.detail}</p>
+                </div>
+              )}
               <div className="ord-card-foot">
                 <span className="ord-pay-label">{o.payment?.label || "-"}</span>
                 <span className="ord-total">
@@ -111,7 +116,7 @@ export default function KelolaPesananPage() {
                       className="ord-btn-pay"
                       onClick={() => updateOrderStatus(o.id, STATUS.SHIPPED)}
                     >
-                      🚚 Kirim Pesanan
+                      <Icon name="truck" size={16} /> Kirim Pesanan
                     </button>
                     <button
                       className="ord-btn-cancel"
@@ -130,7 +135,7 @@ export default function KelolaPesananPage() {
                 )}
                 {o.status === STATUS.SHIPPED && (
                   <span className="ord-wait">
-                    📦 Menunggu konfirmasi penerimaan dari pembeli…
+                    <Icon name="package" size={15} /> Menunggu konfirmasi penerimaan dari pembeli…
                   </span>
                 )}
                 {(o.status === STATUS.DONE || o.status === STATUS.CANCELED) && (

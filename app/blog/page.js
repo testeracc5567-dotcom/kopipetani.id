@@ -124,8 +124,13 @@ export default function BlogPage() {
             {/* Widget: Artikel Populer */}
             <div className="blg__widget">
               <h3 className="blg__widget-title">
-                <span className="blg__widget-title-icon">📈</span> Artikel Populer
-              </h3>
+  <span className="blg__widget-title-icon">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+      <polyline points="16 7 22 7 22 13" />
+    </svg>
+  </span> Artikel Populer
+</h3>
               <div className="blg__popular-list">
                 {popularPosts.map((pop) => (
                   <div key={pop.rank} className="blg__popular-item">

@@ -1,15 +1,49 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import AccountSidebar from "@/components/AccountSidebar";
+import Icon from "@/components/Icon";
 
 const STORE_KEY = "kopipetani_store";
 const KATEGORI = ["Ceri Kopi", "Green Bean", "Kopi Sangrai", "Bibit & Benih", "Pupuk & Nutrisi", "Lainnya"];
 const rp = (n) => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
-const emptyProd = { name: "", price: "", category: KATEGORI[0], stock: "", desc: "", emoji: "☕", image: "" };
+
+const ICON_CHOICES = ["coffee", "sprout", "leaf", "package", "gift", "star"];
+const prodIcon = (val) => (ICON_CHOICES.includes(val) ? val : "coffee");
+
+const emptyProd = { name: "", price: "", category: KATEGORI[0], stock: "", desc: "", emoji: "coffee", image: "" };
+
+// Resize + kompres foto biar muat di localStorage (anti QuotaExceededError)
+function compressImage(file, maxSize = 600, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > maxSize) {
+          height = Math.round((height * maxSize) / width);
+          width = maxSize;
+        } else if (height >= width && height > maxSize) {
+          width = Math.round((width * maxSize) / height);
+          height = maxSize;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function TokoPage() {
   const { user, isLoggedIn, isLoading } = useAuth();
@@ -17,10 +51,12 @@ export default function TokoPage() {
   const [store, setStore] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [form, setForm] = useState({
-    name: "", owner: "", phone: "", email: "", address: "", description: "", emoji: "🏪", profile: "",
+    name: "", owner: "", phone: "", email: "", address: "", description: "", emoji: "store", profile: "",
   });
   const [prod, setProd] = useState(emptyProd);
   const [editingId, setEditingId] = useState(null);
+  const [editingStore, setEditingStore] = useState(false);
+  const [collapsedCats, setCollapsedCats] = useState({});
 
   useEffect(() => {
     try {
@@ -35,9 +71,16 @@ export default function TokoPage() {
   }, [user]);
 
   const persist = (next) => {
-    setStore(next);
-    if (next) localStorage.setItem(STORE_KEY, JSON.stringify(next));
-    else localStorage.removeItem(STORE_KEY);
+    try {
+      if (next) localStorage.setItem(STORE_KEY, JSON.stringify(next));
+      else localStorage.removeItem(STORE_KEY);
+      setStore(next);
+      window.dispatchEvent(new Event("store-updated"));
+      return true;
+    } catch (err) {
+      alert("Penyimpanan browser penuh! Foto produk kegedean. Coba pakai foto yang lebih kecil, atau hapus beberapa produk lama dulu ya. 🙏");
+      return false;
+    }
   };
 
   if (isLoading || !loaded) return null;
@@ -45,7 +88,7 @@ export default function TokoPage() {
   if (!isLoggedIn) {
     return (
       <div className="toko-guard">
-        <p>Kamu harus masuk dulu untuk membuka toko. ☕</p>
+        <p>Kamu harus masuk dulu untuk membuka toko.</p>
         <Link href="/" className="toko-guard-btn">Kembali ke Beranda</Link>
       </div>
     );
@@ -53,27 +96,65 @@ export default function TokoPage() {
 
   const setF = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const setP = (k, v) => setProd((p) => ({ ...p, [k]: v }));
+  const toggleCat = (cat) => setCollapsedCats((s) => ({ ...s, [cat]: !s[cat] }));
 
-  const onProfileUpload = (e) => {
+  const onProfileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setF("profile", reader.result);
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file, 400, 0.7);
+      setF("profile", compressed);
+    } catch {
+      alert("Gagal memproses foto. Coba foto lain ya.");
+    }
   };
 
-  const onProdImageUpload = (e) => {
+  const onProdImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setP("image", reader.result);
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file, 600, 0.7);
+      setP("image", compressed);
+    } catch {
+      alert("Gagal memproses foto. Coba foto lain ya.");
+    }
   };
 
   const createStore = (e) => {
     e.preventDefault();
     if (!form.name.trim()) return;
     persist({ ...form, name: form.name.trim(), createdAt: new Date().toISOString().split("T")[0], products: [] });
+  };
+
+  const startEditStore = () => {
+    setForm({
+      name: store.name || "",
+      owner: store.owner || "",
+      phone: store.phone || "",
+      email: store.email || "",
+      address: store.address || "",
+      description: store.description || "",
+      emoji: store.emoji || "store",
+      profile: store.profile || "",
+    });
+    setEditingStore(true);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const saveStoreProfile = (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    const ok = persist({
+      ...store,
+      name: form.name.trim(),
+      owner: form.owner,
+      phone: form.phone,
+      email: form.email,
+      address: form.address,
+      description: form.description,
+      profile: form.profile,
+    });
+    if (ok) setEditingStore(false);
   };
 
   const startEdit = (p) => {
@@ -84,7 +165,7 @@ export default function TokoPage() {
       category: p.category || KATEGORI[0],
       stock: String(p.stock ?? ""),
       desc: p.desc || "",
-      emoji: p.emoji || "☕",
+      emoji: prodIcon(p.emoji),
       image: p.image || "",
     });
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
@@ -98,9 +179,7 @@ export default function TokoPage() {
   const submitProduct = (e) => {
     e.preventDefault();
     if (!prod.name.trim() || !prod.price) return;
-
     if (editingId) {
-      // Simpan perubahan produk yang ada
       const updated = (store.products || []).map((p) =>
         p.id === editingId
           ? {
@@ -115,10 +194,8 @@ export default function TokoPage() {
             }
           : p
       );
-      persist({ ...store, products: updated });
-      cancelEdit();
+      if (persist({ ...store, products: updated })) cancelEdit();
     } else {
-      // Tambah produk baru
       const newProduct = {
         id: Date.now(),
         name: prod.name.trim(),
@@ -129,8 +206,7 @@ export default function TokoPage() {
         emoji: prod.emoji,
         image: prod.image,
       };
-      persist({ ...store, products: [newProduct, ...(store.products || [])] });
-      setProd(emptyProd);
+      if (persist({ ...store, products: [newProduct, ...(store.products || [])] })) setProd(emptyProd);
     }
   };
 
@@ -140,6 +216,53 @@ export default function TokoPage() {
     persist({ ...store, products: store.products.filter((p) => p.id !== id) });
   };
 
+  // Field form toko (dipakai buat buka toko & edit profil)
+  const storeFormFields = (
+    <>
+      <div className="toko-field">
+        <label>Nama Toko *</label>
+        <input value={form.name} onChange={(e) => setF("name", e.target.value)} placeholder="cth: Kopi Gayo Berkah" required />
+      </div>
+      <div className="toko-field">
+        <label>Profil Toko</label>
+        <div className="toko-profile-upload">
+          <div className="toko-profile-preview">
+            {form.profile ? <img src={form.profile} alt="Profil Toko" /> : <span><Icon name="store" size={30} /></span>}
+          </div>
+          <label className="toko-profile-btn">
+            <Icon name="camera" size={15} /> Upload Foto
+            <input type="file" accept="image/*" onChange={onProfileUpload} hidden />
+          </label>
+          {form.profile && (
+            <button type="button" className="toko-profile-remove" onClick={() => setF("profile", "")}>Hapus</button>
+          )}
+        </div>
+      </div>
+      <div className="toko-field">
+        <label>Nama Pemilik</label>
+        <input value={form.owner} onChange={(e) => setF("owner", e.target.value)} placeholder="Nama kamu" />
+      </div>
+      <div className="toko-row2">
+        <div className="toko-field">
+          <label>No. WhatsApp</label>
+          <input value={form.phone} onChange={(e) => setF("phone", e.target.value)} placeholder="cth: 08123456789" />
+        </div>
+        <div className="toko-field">
+          <label>Email / Google</label>
+          <input type="email" value={form.email} onChange={(e) => setF("email", e.target.value)} placeholder="cth: tokokamu@gmail.com" />
+        </div>
+      </div>
+      <div className="toko-field">
+        <label>Alamat Toko</label>
+        <input value={form.address} onChange={(e) => setF("address", e.target.value)} placeholder="cth: Takengon, Aceh Tengah" />
+      </div>
+      <div className="toko-field">
+        <label>Deskripsi Toko</label>
+        <textarea value={form.description} onChange={(e) => setF("description", e.target.value)} rows={3} placeholder="Ceritakan tentang tokomu..." />
+      </div>
+    </>
+  );
+
   // ===== Belum punya toko: form buka toko =====
   if (!store) {
     return (
@@ -148,53 +271,38 @@ export default function TokoPage() {
         <div className="prf__main">
           <div className="toko-page">
             <div className="toko-intro">
-              <span className="toko-intro-ic">🏪</span>
+              <span className="toko-intro-ic"><Icon name="store" size={40} /></span>
               <h1 className="toko-intro-title">Buka Toko Kamu</h1>
               <p className="toko-intro-sub">Punya kopi atau produk tani sendiri? Yuk buka toko dan mulai jualan di KopiPetani!</p>
             </div>
             <form className="toko-form" onSubmit={createStore}>
-              <div className="toko-field">
-                <label>Nama Toko *</label>
-                <input value={form.name} onChange={(e) => setF("name", e.target.value)} placeholder="cth: Kopi Gayo Berkah" required />
+              {storeFormFields}
+              <button type="submit" className="toko-submit">Buka Toko Sekarang</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== Mode edit profil toko =====
+  if (editingStore) {
+    return (
+      <div className="prf__layout wrap">
+        <AccountSidebar />
+        <div className="prf__main">
+          <div className="toko-page">
+            <div className="toko-intro">
+              <span className="toko-intro-ic"><Icon name="edit" size={36} /></span>
+              <h1 className="toko-intro-title">Edit Profil Toko</h1>
+              <p className="toko-intro-sub">Perbarui info tokomu biar makin dikenal pembeli.</p>
+            </div>
+            <form className="toko-form" onSubmit={saveStoreProfile}>
+              {storeFormFields}
+              <div className="toko-edit-actions">
+                <button type="button" className="toko-cancel-edit" onClick={() => setEditingStore(false)}>Batal</button>
+                <button type="submit" className="toko-submit"><Icon name="check" size={16} /> Simpan Perubahan</button>
               </div>
-              <div className="toko-field">
-                <label>Profil Toko</label>
-                <div className="toko-profile-upload">
-                  <div className="toko-profile-preview">
-                    {form.profile ? <img src={form.profile} alt="Profil Toko" /> : <span>{form.emoji}</span>}
-                  </div>
-                  <label className="toko-profile-btn">
-                    📷 Upload Foto
-                    <input type="file" accept="image/*" onChange={onProfileUpload} hidden />
-                  </label>
-                  {form.profile && (
-                    <button type="button" className="toko-profile-remove" onClick={() => setF("profile", "")}>Hapus</button>
-                  )}
-                </div>
-              </div>
-              <div className="toko-field">
-                <label>Nama Pemilik</label>
-                <input value={form.owner} onChange={(e) => setF("owner", e.target.value)} placeholder="Nama kamu" />
-              </div>
-              <div className="toko-row2">
-                <div className="toko-field">
-                  <label>No. WhatsApp</label>
-                  <input value={form.phone} onChange={(e) => setF("phone", e.target.value)} placeholder="cth: 08123456789" />
-                </div>
-                <div className="toko-field">
-                  <label>Email / Google</label>
-                  <input type="email" value={form.email} onChange={(e) => setF("email", e.target.value)} placeholder="cth: tokokamu@gmail.com" />
-                </div>
-              </div>
-              <div className="toko-field">
-                <label>Alamat Toko</label>
-                <input value={form.address} onChange={(e) => setF("address", e.target.value)} placeholder="cth: Takengon, Aceh Tengah" />
-              </div>
-              <div className="toko-field">
-                <label>Deskripsi Toko</label>
-                <textarea value={form.description} onChange={(e) => setF("description", e.target.value)} rows={3} placeholder="Ceritakan tentang tokomu..." />
-              </div>
-              <button type="submit" className="toko-submit">Buka Toko Sekarang 🚀</button>
             </form>
           </div>
         </div>
@@ -204,6 +312,38 @@ export default function TokoPage() {
 
   // ===== Sudah punya toko: dashboard =====
   const products = store.products || [];
+
+  const groupedProducts = (() => {
+    const map = {};
+    products.forEach((p) => {
+      const c = p.category || "Lainnya";
+      (map[c] = map[c] || []).push(p);
+    });
+    const ordered = [];
+    KATEGORI.forEach((c) => { if (map[c]) { ordered.push([c, map[c]]); delete map[c]; } });
+    Object.keys(map).forEach((c) => ordered.push([c, map[c]]));
+    return ordered;
+  })();
+
+  const renderCard = (p) => (
+    <div className={`toko-prod-card${editingId === p.id ? " editing" : ""}`} key={p.id}>
+      <div className="toko-prod-emoji">
+        {p.image ? <img src={p.image} alt={p.name} className="toko-prod-img" /> : <Icon name={prodIcon(p.emoji)} size={30} />}
+      </div>
+      <div className="toko-prod-info">
+        <span className="toko-prod-cat">{p.category}</span>
+        <p className="toko-prod-name">{p.name}</p>
+        {p.desc && <p className="toko-prod-desc">{p.desc}</p>}
+        <div className="toko-prod-foot">
+          <span className="toko-prod-price">{rp(p.price)}</span>
+          <span className="toko-prod-stock">Stok: {p.stock}</span>
+        </div>
+        <button className="toko-prod-edit-btn" onClick={() => startEdit(p)}><Icon name="edit" size={13} /> Edit</button>
+      </div>
+      <button className="toko-prod-del" onClick={() => deleteProduct(p.id)} aria-label="Hapus"><Icon name="trash" size={16} /></button>
+    </div>
+  );
+
   return (
     <div className="prf__layout wrap">
       <AccountSidebar />
@@ -211,17 +351,18 @@ export default function TokoPage() {
         <div className="toko-page">
           <div className="toko-header">
             <div className="toko-header-emoji">
-              {store.profile ? <img src={store.profile} alt={store.name} className="toko-header-img" /> : store.emoji}
+              {store.profile ? <img src={store.profile} alt={store.name} className="toko-header-img" /> : <Icon name="store" size={34} />}
             </div>
             <div className="toko-header-info">
               <h1 className="toko-header-name">{store.name}</h1>
               <p className="toko-header-desc">{store.description || "Belum ada deskripsi toko."}</p>
               <div className="toko-meta">
-                {store.owner && <span>👤 {store.owner}</span>}
-                {store.phone && <span>📱 {store.phone}</span>}
-                {store.email && <span>📧 {store.email}</span>}
-                {store.address && <span>📍 {store.address}</span>}
+                {store.owner && <span><Icon name="user" size={14} /> {store.owner}</span>}
+                {store.phone && <span><Icon name="phone" size={14} /> {store.phone}</span>}
+                {store.email && <span><Icon name="mail" size={14} /> {store.email}</span>}
+                {store.address && <span><Icon name="map-pin" size={14} /> {store.address}</span>}
               </div>
+              <button className="toko-edit-profil-btn" onClick={startEditStore}><Icon name="edit" size={14} /> Edit Profil</button>
             </div>
           </div>
           <div className="toko-stats">
@@ -231,7 +372,9 @@ export default function TokoPage() {
           </div>
           <div className="toko-body">
             <form className="toko-addprod" onSubmit={submitProduct}>
-              <h2 className="toko-section-title">{editingId ? "✏️ Edit Produk" : "➕ Tambah Produk"}</h2>
+              <h2 className="toko-section-title">
+                {editingId ? (<><Icon name="edit" size={18} /> Edit Produk</>) : (<><Icon name="plus" size={18} /> Tambah Produk</>)}
+              </h2>
               <div className="toko-field">
                 <label>Nama Produk *</label>
                 <input value={prod.name} onChange={(e) => setP("name", e.target.value)} placeholder="cth: Arabika Gayo 250g" required />
@@ -240,10 +383,10 @@ export default function TokoPage() {
                 <label>Foto Produk</label>
                 <div className="toko-profile-upload">
                   <div className="toko-profile-preview">
-                    {prod.image ? <img src={prod.image} alt="Foto Produk" /> : <span>{prod.emoji}</span>}
+                    {prod.image ? <img src={prod.image} alt="Foto Produk" /> : <span><Icon name={prodIcon(prod.emoji)} size={30} /></span>}
                   </div>
                   <label className="toko-profile-btn">
-                    📷 Upload Foto
+                    <Icon name="camera" size={15} /> Upload Foto
                     <input type="file" accept="image/*" onChange={onProdImageUpload} hidden />
                   </label>
                   {prod.image && (
@@ -271,8 +414,10 @@ export default function TokoPage() {
                 <div className="toko-field">
                   <label>Ikon (kalau nggak upload foto)</label>
                   <div className="toko-emojis">
-                    {["☕", "🫘", "🍒", "🌱", "🪴", "📦"].map((em) => (
-                      <button type="button" key={em} className={`toko-emoji${prod.emoji === em ? " active" : ""}`} onClick={() => setP("emoji", em)}>{em}</button>
+                    {ICON_CHOICES.map((ic) => (
+                      <button type="button" key={ic} className={`toko-emoji${prod.emoji === ic ? " active" : ""}`} onClick={() => setP("emoji", ic)}>
+                        <Icon name={ic} size={20} />
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -281,7 +426,9 @@ export default function TokoPage() {
                 <label>Deskripsi</label>
                 <textarea value={prod.desc} onChange={(e) => setP("desc", e.target.value)} rows={2} placeholder="Deskripsi singkat produk..." />
               </div>
-              <button type="submit" className="toko-submit">{editingId ? "💾 Simpan Perubahan" : "Tambah Produk"}</button>
+              <button type="submit" className="toko-submit">
+                {editingId ? (<><Icon name="check" size={16} /> Simpan Perubahan</>) : "Tambah Produk"}
+              </button>
               {editingId && (
                 <button type="button" className="toko-cancel-edit" onClick={cancelEdit}>Batal Edit</button>
               )}
@@ -289,28 +436,25 @@ export default function TokoPage() {
             <div className="toko-products">
               <h2 className="toko-section-title">Produk Toko ({products.length})</h2>
               {products.length === 0 ? (
-                <div className="toko-empty">Belum ada produk. Tambahkan produk pertamamu! 👈</div>
+                <div className="toko-empty">Belum ada produk. Tambahkan produk pertamamu!</div>
               ) : (
-                <div className="toko-prod-grid">
-                  {products.map((p) => (
-                    <div className={`toko-prod-card${editingId === p.id ? " editing" : ""}`} key={p.id}>
-                      <div className="toko-prod-emoji">
-                        {p.image ? <img src={p.image} alt={p.name} className="toko-prod-img" /> : p.emoji}
+                groupedProducts.map(([cat, items]) => (
+                  <div key={cat} className="toko-cat-group">
+                    <h3
+                      className={`toko-cat-title${collapsedCats[cat] ? " collapsed" : ""}`}
+                      onClick={() => toggleCat(cat)}
+                    >
+                      <span className="toko-cat-chevron"><Icon name="chevron" size={16} /></span>
+                      <span className="toko-cat-name">{cat}</span>
+                      <span className="toko-cat-count">{items.length}</span>
+                    </h3>
+                    {!collapsedCats[cat] && (
+                      <div className="toko-prod-grid">
+                        {items.map(renderCard)}
                       </div>
-                      <div className="toko-prod-info">
-                        <span className="toko-prod-cat">{p.category}</span>
-                        <p className="toko-prod-name">{p.name}</p>
-                        {p.desc && <p className="toko-prod-desc">{p.desc}</p>}
-                        <div className="toko-prod-foot">
-                          <span className="toko-prod-price">{rp(p.price)}</span>
-                          <span className="toko-prod-stock">Stok: {p.stock}</span>
-                        </div>
-                        <button className="toko-prod-edit-btn" onClick={() => startEdit(p)}>✏️ Edit</button>
-                      </div>
-                      <button className="toko-prod-del" onClick={() => deleteProduct(p.id)} aria-label="Hapus">🗑</button>
-                    </div>
-                  ))}
-                </div>
+                    )}
+                  </div>
+                ))
               )}
             </div>
           </div>

@@ -1,5 +1,5 @@
 "use client";
-
+import { useState } from "react";
 import Link from "next/link";
 import {
   useOrders,
@@ -13,8 +13,11 @@ import { addPointHistory, nowStr } from "@/lib/points";
 import { useAuth } from "@/context/AuthContext";
 import { useUI } from "@/context/UIContext";
 import { findPayment } from "@/lib/payments";
-import { rp } from "@/lib/data";
+import { products, rp } from "@/lib/data";
+import { getStoreProducts } from "@/lib/storeProducts";
 import AccountSidebar from "@/components/AccountSidebar";
+import ChatSellerModal from "@/components/ChatSellerModal";
+import InvoiceModal from "@/components/InvoiceModal";
 import Icon from "@/components/Icon";
 
 const STATUS_STYLE = {
@@ -66,6 +69,17 @@ export default function PesananPage() {
   const orders = useOrders();
   const { user, updateUser, isLoggedIn } = useAuth();
   const { openAuth } = useUI();
+  const [chatSeller, setChatSeller] = useState(null);
+  const [invoiceOrder, setInvoiceOrder] = useState(null);
+
+  // Cari nama penjual dari produk pertama di pesanan
+  const resolveSeller = (o) => {
+    const first = (o.items || [])[0];
+    if (!first) return "Penjual KopiPetani";
+    const all = [...products, ...getStoreProducts()];
+    const p = all.find((x) => String(x.id) === String(first.id));
+    return p?.origin || "Penjual KopiPetani";
+  };
 
   const handleReceived = (o) => {
     updateOrderStatus(o.id, STATUS.DONE);
@@ -141,6 +155,13 @@ export default function PesananPage() {
                       <Badge status={o.status} />
                     </div>
                     <Items order={o} />
+                    {o.address && (
+                      <div className="ord-address">
+                        <p className="ord-address-title"><Icon name="map-pin" size={15} /> Alamat Pengiriman</p>
+                        <p className="ord-address-name">{o.address.name} · {o.address.phone}</p>
+                        <p className="ord-address-detail">{o.address.detail}</p>
+                      </div>
+                    )}
                     <div className="ord-card-foot">
                       <span className="ord-pay-label">
                         {pay ? `${pay.label}` : "-"}
@@ -149,6 +170,18 @@ export default function PesananPage() {
                         Total: <b>{rp(o.total)}</b>
                       </span>
                     </div>
+
+                    <div className="ord-tools">
+                      <button className="ord-tool-btn" onClick={() => setInvoiceOrder(o)}>
+                        <Icon name="book-open" size={15} /> Invoice
+                      </button>
+                      {(o.status === STATUS.PROCESS || o.status === STATUS.SHIPPED) && (
+                        <button className="ord-tool-btn ord-tool-chat" onClick={() => setChatSeller(resolveSeller(o))}>
+                          <Icon name="send" size={15} /> Chat Seller
+                        </button>
+                      )}
+                    </div>
+
                     {o.pointsEarned > 0 && o.status !== STATUS.CANCELED && (
                       <div className="ord-points">
                         <Icon name="gift" size={15} />
@@ -196,17 +229,13 @@ export default function PesananPage() {
                           </p>
                         )}
                         <div className="ord-actions">
-                          <button
-                            className="ord-btn-pay"
-                            onClick={() => payOrder(o.id)}
-                          >
+                          <button className="ord-btn-pay" onClick={() => payOrder(o.id)}>
                             <Icon name="check" size={16} /> Saya Sudah Bayar
                           </button>
                           <button
                             className="ord-btn-cancel"
                             onClick={() => {
-                              if (confirm("Batalkan pembayaran ini?"))
-                                cancelOrder(o.id);
+                              if (confirm("Batalkan pembayaran ini?")) cancelOrder(o.id);
                             }}
                           >
                             Batalkan
@@ -220,10 +249,7 @@ export default function PesananPage() {
                           const seq = [STATUS.PROCESS, STATUS.SHIPPED, STATUS.DONE];
                           const curIdx = seq.indexOf(o.status);
                           return seq.map((st, i) => (
-                            <div
-                              key={st}
-                              className={`ord-track-step${i <= curIdx ? " done" : ""}`}
-                            >
+                            <div key={st} className={`ord-track-step${i <= curIdx ? " done" : ""}`}>
                               <span className="ord-track-dot" />
                               <span className="ord-track-label">{st}</span>
                             </div>
@@ -252,8 +278,7 @@ export default function PesananPage() {
                         <button
                           className="ord-btn-received"
                           onClick={() => {
-                            if (confirm("Konfirmasi barang sudah kamu terima?"))
-                              handleReceived(o);
+                            if (confirm("Konfirmasi barang sudah kamu terima?")) handleReceived(o);
                           }}
                         >
                           <Icon name="check-circle" size={16} /> Pesanan Diterima
@@ -272,6 +297,9 @@ export default function PesananPage() {
           )}
         </main>
       </div>
+
+      {chatSeller && <ChatSellerModal seller={chatSeller} onClose={() => setChatSeller(null)} />}
+      {invoiceOrder && <InvoiceModal order={invoiceOrder} onClose={() => setInvoiceOrder(null)} />}
     </div>
   );
 }

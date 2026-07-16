@@ -1,9 +1,9 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import { products } from "@/lib/data";
 import { chipsByMode } from "@/lib/kupai";
 import { useCart } from "@/context/CartContext";
+import Icon from "@/components/Icon";
 
 export default function KupaiChat() {
   const { addToCart } = useCart();
@@ -24,7 +24,6 @@ export default function KupaiChat() {
   const botSay = (html, recId) => {
     setMessages((prev) => [...prev, { who: "bot", html, recId }]);
   };
-
   const meSay = (text) => {
     setMessages((prev) => [...prev, { who: "me", text }]);
   };
@@ -35,7 +34,7 @@ export default function KupaiChat() {
     if (willOpen && !started) {
       setStarted(true);
       botSay(
-        "Halo! Aku <b>KupAI</b> ☕, asisten kopi kamu — dari kebun sampai cangkir. Mau tanya soal belanja kopi, cara seduh, atau tips tanam? Pilih di bawah atau ketik langsung ya!"
+        "Halo! Aku <b>KupAI</b>, asisten kopi kamu — dari kebun sampai cangkir. Mau tanya soal belanja kopi, cara seduh, atau tips tanam? Pilih di bawah atau ketik langsung ya!"
       );
     }
   };
@@ -44,8 +43,8 @@ export default function KupaiChat() {
     setMode(m);
     botSay(
       m === "pembeli"
-        ? "Oke, mode <b>Pembeli</b> aktif ☕. Aku bantu pilih kopi & cara nyeduhnya."
-        : "Oke, mode <b>Petani</b> aktif 🌱. Aku bantu soal tanam, panen, proses & harga jual."
+        ? "Oke, mode <b>Pembeli</b> aktif. Aku bantu pilih kopi & cara nyeduhnya."
+        : "Oke, mode <b>Petani</b> aktif. Aku bantu soal tanam, panen, proses & harga jual."
     );
   };
 
@@ -92,15 +91,12 @@ export default function KupaiChat() {
         onClick={toggle}
         aria-label="Buka KupAI"
       >
-       <img className="kup-logo" src="/kupai-logo.svg" alt="KupAI" />
+        <img className="kup-logo" src="/kupai-logo.svg" alt="KupAI" />
         <span className="lbl">KupAI</span>
       </button>
-
       <div className={"kup-panel" + (open ? " open" : "")}>
         <div className="kup-head">
-          <div className="av">
-  <img className="kup-logo" src="/kupai-logo.svg" alt="KupAI" />
-</div>
+          <div className="av"><img className="kup-logo" src="/kupai-logo.svg" alt="KupAI" /></div>
           <div className="ht">
             <b>KupAI</b>
             <small>Online</small>
@@ -135,7 +131,7 @@ export default function KupaiChat() {
                       className="recadd"
                       onClick={() => addToCart(m.recId)}
                     >
-                      ➕ Tambah{" "}
+                      <Icon name="plus" size={13} /> Tambah{" "}
                       {products.find((p) => p.id === m.recId)?.name} ke
                       keranjang
                     </button>
@@ -172,7 +168,10 @@ export default function KupaiChat() {
             onKeyDown={(e) => e.key === "Enter" && send()}
           />
           <button onClick={send} aria-label="Kirim">
-            ➤
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" />
+              <path d="m21.854 2.147-10.94 10.939" />
+            </svg>
           </button>
         </div>
       </div>

@@ -1,3 +1,5 @@
+import Icon from "@/components/Icon";
+
 export default function WhySection() {
   return (
     <section className="why" id="why">
@@ -13,10 +15,10 @@ export default function WhySection() {
         <div className="why-cols">
           <div className="why-col">
             <h3>
-              <span className="ic">🛍️</span> Untuk Penikmat Kopi
+              <span className="ic"><Icon name="coffee" size={20} /></span> Untuk Penikmat Kopi
             </h3>
             <div className="feat">
-              <span className="fi">☕</span>
+              <span className="fi"><Icon name="star" size={22} /></span>
               <div>
                 <b>Rasa Otentik Nusantara</b>
                 <p>
@@ -26,9 +28,9 @@ export default function WhySection() {
               </div>
             </div>
             <div className="feat">
-              <span className="fi">🚚</span>
+              <span className="fi"><Icon name="truck" size={22} /></span>
               <div>
-                <b>Pengiriman Segar & Cepat</b>
+                <b>Pengiriman Segar &amp; Cepat</b>
                 <p>
                   Kopi dikemas rapi dan dikirim dalam kondisi terbaik sehingga
                   tetap segar sampai di rumah Anda.
@@ -36,7 +38,7 @@ export default function WhySection() {
               </div>
             </div>
             <div className="feat">
-              <span className="fi">🌿</span>
+              <span className="fi"><Icon name="leaf" size={22} /></span>
               <div>
                 <b>Dukung Komunitas Lokal</b>
                 <p>
@@ -48,10 +50,10 @@ export default function WhySection() {
           </div>
           <div className="why-col">
             <h3>
-              <span className="ic">🤝</span> Untuk Mitra Petani
+              <span className="ic"><Icon name="sprout" size={20} /></span> Untuk Mitra Petani
             </h3>
             <div className="feat">
-              <span className="fi">💰</span>
+              <span className="fi"><Icon name="coins" size={22} /></span>
               <div>
                 <b>Harga Jual yang Lebih Adil</b>
                 <p>
@@ -61,7 +63,7 @@ export default function WhySection() {
               </div>
             </div>
             <div className="feat">
-              <span className="fi">🌐</span>
+              <span className="fi"><Icon name="store" size={22} /></span>
               <div>
                 <b>Akses Pasar yang Luas</b>
                 <p>
@@ -71,7 +73,7 @@ export default function WhySection() {
               </div>
             </div>
             <div className="feat">
-              <span className="fi">📊</span>
+              <span className="fi"><Icon name="check-circle" size={22} /></span>
               <div>
                 <b>Transparansi Proses</b>
                 <p>

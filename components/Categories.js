@@ -1,16 +1,14 @@
 "use client";
-
 import { categories } from "@/lib/data";
 import { useShop } from "@/context/ShopContext";
+import Icon from "@/components/Icon";
 
 export default function Categories() {
   const { activeCat, setActiveCat } = useShop();
-
   const handleSelect = (k) => {
     setActiveCat(k);
     document.getElementById("shop")?.scrollIntoView({ behavior: "smooth" });
   };
-
   return (
     <section className="kcats-section">
       <div className="kcats-head">
@@ -20,7 +18,6 @@ export default function Categories() {
           pengalaman seduh yang istimewa.
         </p>
       </div>
-
       <div className="kcats-grid">
         {categories.map((c) => (
           <button
@@ -28,7 +25,7 @@ export default function Categories() {
             className={"kcat" + (activeCat === c.k ? " active" : "")}
             onClick={() => handleSelect(c.k)}
           >
-            <span className="kcat-badge">{c.em}</span>
+            <span className="kcat-badge"><Icon name={c.icon} size={26} /></span>
             <span className="kcat-label">{c.k}</span>
           </button>
         ))}

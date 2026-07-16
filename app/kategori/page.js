@@ -1,10 +1,10 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import { products } from "@/lib/data";
 import ProductCard from "@/components/ProductCard";
 import { useStoreProducts } from "@/lib/storeProducts";
+import Icon from "@/components/Icon";
 
 const GROUPS = [
   {
@@ -12,9 +12,9 @@ const GROUPS = [
     label: "Sarana & Kebutuhan Tani",
     desc: "Semua kebutuhan dari hulu — bibit unggul, pupuk, hingga perlindungan tanaman.",
     cats: [
-      { cat: "Bibit & Benih", em: "🌱", desc: "Bibit unggul & benih kopi siap tanam", open: true },
-      { cat: "Pupuk", em: "🌿", desc: "Nutrisi organik & non-organik", open: false },
-      { cat: "Pestisida", em: "🛡️", desc: "Perlindungan tanaman dari hama & penyakit", open: false },
+      { cat: "Bibit & Benih", icon: "sprout", desc: "Bibit unggul & benih kopi siap tanam", open: true },
+      { cat: "Pupuk", icon: "leaf", desc: "Nutrisi organik & non-organik", open: false },
+      { cat: "Pestisida", icon: "shield", desc: "Perlindungan tanaman dari hama & penyakit", open: false },
     ],
   },
   {
@@ -22,10 +22,10 @@ const GROUPS = [
     label: "Hasil & Produk Kopi",
     desc: "Dari ceri segar hasil panen sampai kopi bubuk siap seduh.",
     cats: [
-      { cat: "Ceri Kopi", em: "🍒", desc: "Buah kopi segar langsung dari kebun petani", open: true },
-      { cat: "Green Bean", em: "🫘", desc: "Biji kopi mentah untuk di-roasting sendiri", open: false },
-      { cat: "Roasted Bean", em: "🔥", desc: "Biji kopi sangrai siap giling", open: true },
-      { cat: "Kopi Bubuk", em: "☕", desc: "Siap seduh — arabika, robusta & premium", open: true },
+      { cat: "Ceri Kopi", icon: "cherry", desc: "Buah kopi segar langsung dari kebun petani", open: true },
+      { cat: "Green Bean", icon: "bean", desc: "Biji kopi mentah untuk di-roasting sendiri", open: false },
+      { cat: "Roasted Bean", icon: "flame", desc: "Biji kopi sangrai siap giling", open: true },
+      { cat: "Kopi Bubuk", icon: "coffee", desc: "Siap seduh — arabika, robusta & premium", open: true },
     ],
   },
 ];
@@ -54,12 +54,10 @@ export default function KategoriPage() {
   // Normalisasi kategori produk toko biar masuk ke section yang cocok
   const normStore = storeProducts.map((p) => ({ ...p, cat: CAT_MAP[p.cat] || p.cat }));
   const allProducts = [...normStore, ...products];
-
   const groups = allProducts.reduce((acc, p) => {
     (acc[p.cat] = acc[p.cat] || []).push(p);
     return acc;
   }, {});
-
   // Kategori yang sudah punya section
   const knownCats = GROUPS.flatMap((g) => g.cats.map((c) => c.cat));
   // Produk toko yang kategorinya belum ada section-nya
@@ -71,7 +69,6 @@ export default function KategoriPage() {
     init["__mitra__"] = true;
     return init;
   });
-
   const toggle = (cat) => setOpen((o) => ({ ...o, [cat]: !o[cat] }));
 
   return (
@@ -84,7 +81,6 @@ export default function KategoriPage() {
           dari petani lokal terbaik.
         </p>
       </div>
-
       {GROUPS.map((group) => (
         <div key={group.key} className="kc-group">
           <div className="kc-group-head">
@@ -104,7 +100,7 @@ export default function KategoriPage() {
                   onClick={() => toggle(c.cat)}
                   aria-expanded={isOpen}
                 >
-                  <span className="kc-sec-em">{c.em}</span>
+                  <span className="kc-sec-em"><Icon name={c.icon} size={22} /></span>
                   <span className="kc-sec-info">
                     <span className="kc-sec-title">{c.cat}</span>
                     <span className="kc-sec-desc">{c.desc}</span>
@@ -124,7 +120,6 @@ export default function KategoriPage() {
           })}
         </div>
       ))}
-
       {leftoverStore.length > 0 && (
         <div className="kc-group">
           <div className="kc-group-head">
@@ -140,7 +135,7 @@ export default function KategoriPage() {
               onClick={() => toggle("__mitra__")}
               aria-expanded={open["__mitra__"]}
             >
-              <span className="kc-sec-em">🏪</span>
+              <span className="kc-sec-em"><Icon name="store" size={22} /></span>
               <span className="kc-sec-info">
                 <span className="kc-sec-title">Toko Mitra</span>
                 <span className="kc-sec-desc">Produk lain dari penjual mitra</span>
@@ -158,7 +153,6 @@ export default function KategoriPage() {
           </section>
         </div>
       )}
-
       <section className="kc-edu">
         <div className="kc-edu-inner">
           <span className="kc-edu-tag">C · PENDUKUNG</span>
@@ -172,7 +166,7 @@ export default function KategoriPage() {
             Baca Artikel Tani →
           </Link>
         </div>
-        <div className="kc-edu-art">📚</div>
+        <div className="kc-edu-art"><Icon name="book-open" size={90} /></div>
       </section>
     </main>
   );

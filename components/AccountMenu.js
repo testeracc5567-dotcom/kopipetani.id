@@ -1,10 +1,10 @@
 "use client";
-
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useUI } from "@/context/UIContext";
 import { useRouter } from "next/navigation";
+import Icon from "@/components/Icon";
 
 export default function AccountMenu() {
   const { isLoggedIn, user, logout } = useAuth();
@@ -24,18 +24,17 @@ export default function AccountMenu() {
   if (!isLoggedIn) {
     return (
       <button className="acc-login" onClick={() => openAuth("masuk")}>
-        <span className="acc-login-ic">👤</span> Masuk/Daftar
+        <span className="acc-login-ic"><Icon name="user" size={16} /></span> Masuk/Daftar
       </button>
     );
   }
 
   const initial = (user?.name || "U").charAt(0).toUpperCase();
-
   const items = [
-    { label: "Profil", href: "/profil", icon: "👤" },
-    { label: "Transaksi Anda", href: "/pesanan", icon: "🧾" },
-    { label: "Toko Anda", href: "/toko", icon: "🏪" },
-    { label: "Member Loyalty", href: "/member", icon: "🏅" },
+    { label: "Profil", href: "/profil", icon: "user" },
+    { label: "Transaksi Anda", href: "/pesanan", icon: "package" },
+    { label: "Toko Anda", href: "/toko", icon: "store" },
+    { label: "Member Loyalty", href: "/member", icon: "award" },
   ];
 
   const handleLogout = () => {
@@ -51,7 +50,6 @@ export default function AccountMenu() {
         <span className="acc-name">{user?.name || "Akun"}</span>
         <span className={`acc-caret ${open ? "up" : ""}`}>▾</span>
       </button>
-
       {open && (
         <div className="acc-menu">
           <div className="acc-head">
@@ -61,7 +59,6 @@ export default function AccountMenu() {
               <p className="acc-head-email">{user?.email}</p>
             </div>
           </div>
-
           {items.map((it) => (
             <Link
               key={it.label}
@@ -69,12 +66,11 @@ export default function AccountMenu() {
               className="acc-item"
               onClick={() => setOpen(false)}
             >
-              <span className="acc-item-ic">{it.icon}</span> {it.label}
+              <span className="acc-item-ic"><Icon name={it.icon} size={17} /></span> {it.label}
             </Link>
           ))}
-
           <button className="acc-item acc-logout" onClick={handleLogout}>
-            <span className="acc-item-ic">↩</span> Keluar
+            <span className="acc-item-ic"><Icon name="logout" size={17} /></span> Keluar
           </button>
         </div>
       )}

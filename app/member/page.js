@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useRiwayat, addPointHistory, nowStr } from "@/lib/points";
+import Icon from "@/components/Icon";
 
 const TIERS = [
-  { name: "Member Baru", min: 0, em: "🌱", perk: "Akses dasar & kumpulkan poin dari tiap pesanan" },
-  { name: "Bronze", min: 15000, em: "🥉", perk: "Voucher belanja hemat & promo khusus member" },
-  { name: "Silver", min: 30000, em: "🥈", perk: "Voucher lebih besar + gratis ongkir berkala" },
-  { name: "Gold", min: 666666, em: "🥇", perk: "Semua benefit + voucher eksklusif level tertinggi" },
+  { name: "Member Baru", min: 0, icon: "sprout", perk: "Akses dasar & kumpulkan poin dari tiap pesanan" },
+  { name: "Bronze", min: 15000, icon: "award", perk: "Voucher belanja hemat & promo khusus member" },
+  { name: "Silver", min: 30000, icon: "award", perk: "Voucher lebih besar + gratis ongkir berkala" },
+  { name: "Gold", min: 666666, icon: "award", perk: "Semua benefit + voucher eksklusif level tertinggi" },
 ];
 
 const VOUCHERS = [
@@ -37,7 +38,7 @@ export default function MemberPage() {
   if (!isLoggedIn) {
     return (
       <div className="mbr-guard">
-        <p>Kamu harus masuk dulu untuk melihat halaman member. ☕</p>
+        <p>Kamu harus masuk dulu untuk melihat halaman member.</p>
         <Link href="/" className="mbr-guard-btn">Kembali ke Beranda</Link>
       </div>
     );
@@ -74,11 +75,11 @@ export default function MemberPage() {
   const handleLogout = () => { logout(); router.push("/"); };
 
   const navItems = [
-    { label: "Dashboard", href: "/profil", icon: "▦" },
-    { label: "Pesanan Saya", href: "/pesanan", icon: "🧾" },
-    { label: "Toko Anda", href: "/toko", icon: "🏪" },
-    { label: "Hadiah Member", href: "/member", icon: "🎁", active: true },
-    { label: "Pengaturan Akun", href: "/profil", icon: "⚙" },
+    { label: "Dashboard", href: "/profil", icon: "dashboard" },
+    { label: "Pesanan Saya", href: "/pesanan", icon: "package" },
+    { label: "Toko Anda", href: "/toko", icon: "store" },
+    { label: "Hadiah Member", href: "/member", icon: "gift", active: true },
+    { label: "Pengaturan Akun", href: "/profil", icon: "settings" },
   ];
 
   return (
@@ -86,20 +87,21 @@ export default function MemberPage() {
       <div className="mbr-shell">
         <aside className="mbr-side">
           <div className="mbr-side-brand">
-            <span className="mbr-side-logo">☕ Jejak Kopi</span>
+            <span className="mbr-side-logo"><Icon name="coffee" size={18} /> Jejak Kopi</span>
             <span className="mbr-side-tag">Sebuah jejak yang memberi kamu semangat</span>
           </div>
           <nav className="mbr-nav">
             {navItems.map((it) => (
               <Link key={it.label} href={it.href} className={`mbr-nav-item${it.active ? " active" : ""}`}>
-                <span className="mbr-nav-ic">{it.icon}</span> {it.label}
+                <span className="mbr-nav-ic"><Icon name={it.icon} size={18} /></span> {it.label}
               </Link>
             ))}
           </nav>
           <button className="mbr-logout" onClick={handleLogout}>
-            <span className="mbr-nav-ic">↩</span> Logout
+            <span className="mbr-nav-ic"><Icon name="logout" size={18} /></span> Logout
           </button>
         </aside>
+
         <main className="mbr-main">
           <section className="mbr-hero">
             <div className="mbr-hero-left">
@@ -117,12 +119,12 @@ export default function MemberPage() {
                 <p className="mbr-progress-hint">
                   {nextTier
                     ? `Belanja ${(nextTier.min - points).toLocaleString("id-ID")} poin lagi untuk naik ke level ${nextTier.name}`
-                    : "Kamu sudah di level tertinggi! 🎉"}
+                    : "Kamu sudah di level tertinggi!"}
                 </p>
               </div>
             </div>
             <div className="mbr-hero-card">
-              <div className="mbr-hero-badge">🏅</div>
+              <div className="mbr-hero-badge"><Icon name="award" size={30} /></div>
               <p className="mbr-hero-card-title">{curTier.name}</p>
               <p className="mbr-hero-card-sub">
                 Teruslah belanja dan tingkatkan level membermu agar berkesempatan dapat voucher dan benefit lainnya.
@@ -130,6 +132,7 @@ export default function MemberPage() {
               <button className="mbr-hero-card-btn" onClick={() => setTab("level")}>Lihat Level Lainnya</button>
             </div>
           </section>
+
           <div className="mbr-tabs">
             <button className={`mbr-tab${tab === "riwayat" ? " active" : ""}`} onClick={() => setTab("riwayat")}>Riwayat Poin</button>
             <button className={`mbr-tab${tab === "tukar" ? " active" : ""}`} onClick={() => setTab("tukar")}>Tukar Poin</button>
@@ -189,7 +192,7 @@ export default function MemberPage() {
                     key={t.name}
                     className={`mbr-level-card${isCurrent ? " active" : ""}${!reached ? " locked" : ""}`}
                   >
-                    <span className="mbr-level-badge">{t.em}</span>
+                    <span className="mbr-level-badge"><Icon name={t.icon} size={28} /></span>
                     <div className="mbr-level-info">
                       <div className="mbr-level-name">{t.name}</div>
                       <div className="mbr-level-req">
@@ -198,11 +201,13 @@ export default function MemberPage() {
                       <div className="mbr-level-perk">{t.perk}</div>
                     </div>
                     <span className={`mbr-level-status ${isCurrent ? "current" : reached ? "reached" : "need"}`}>
-                      {isCurrent
-                        ? "Level Kamu"
-                        : reached
-                        ? "Tercapai ✓"
-                        : `Butuh ${(t.min - points).toLocaleString("id-ID")} poin`}
+                      {isCurrent ? (
+                        "Level Kamu"
+                      ) : reached ? (
+                        <>Tercapai <Icon name="check" size={13} /></>
+                      ) : (
+                        `Butuh ${(t.min - points).toLocaleString("id-ID")} poin`
+                      )}
                     </span>
                   </div>
                 );
@@ -215,7 +220,7 @@ export default function MemberPage() {
       {selected && (
         <div className="mbr-modal-overlay" onClick={closeRedeem}>
           <div className="mbr-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="mbr-modal-close" onClick={closeRedeem}>✕</button>
+            <button className="mbr-modal-close" onClick={closeRedeem}><Icon name="x" size={16} /></button>
             <div className="mbr-modal-voucher">
               <span className="mbr-voucher-tag">VOUCHER</span>
               <span className="mbr-voucher-off">{selected.off} OFF</span>
@@ -225,7 +230,7 @@ export default function MemberPage() {
                 <p className="mbr-modal-title">Apakah kamu ingin menukar?</p>
                 <p className="mbr-modal-desc">{selected.title} — {selected.desc}</p>
                 <p className="mbr-modal-cost">Dengan total <b>{selected.cost.toLocaleString("id-ID")} poin</b></p>
-                {points < selected.cost && <p className="mbr-modal-warn">Poin kamu belum cukup 😢</p>}
+                {points < selected.cost && <p className="mbr-modal-warn">Poin kamu belum cukup</p>}
                 <div className="mbr-modal-actions">
                   <button className="mbr-btn-ghost" onClick={closeRedeem}>Tidak</button>
                   <button className="mbr-btn-primary" onClick={confirmRedeem} disabled={points < selected.cost}>Iya</button>
@@ -233,11 +238,15 @@ export default function MemberPage() {
               </>
             ) : (
               <>
-                <p className="mbr-modal-title">🎉 Selamat! Voucher berhasil ditukar!</p>
+                <p className="mbr-modal-title mbr-modal-title--ok">
+                  <Icon name="check-circle" size={18} /> Selamat! Voucher berhasil ditukar!
+                </p>
                 <p className="mbr-modal-desc">{selected.title} — {selected.desc}</p>
                 <div className="mbr-code">
                   <span className="mbr-code-val">{redeemCode}</span>
-                  <button className="mbr-code-copy" onClick={copyCode}>{copied ? "Tersalin ✓" : "Salin"}</button>
+                  <button className="mbr-code-copy" onClick={copyCode}>
+                    {copied ? (<>Tersalin <Icon name="check" size={13} /></>) : "Salin"}
+                  </button>
                 </div>
                 <p className="mbr-modal-hint">Kode ini otomatis masuk ke Keranjang di bagian "Pilih Voucher".</p>
                 <div className="mbr-modal-actions">

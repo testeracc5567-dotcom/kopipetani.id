@@ -28,7 +28,6 @@ export default function BlogPostPage({ params }) {
         <Link href="/blog" className="blg-detail__back">
           ← Kembali ke Blog
         </Link>
-
         {/* Dynamic two-column layout */}
         <div className="blg__layout">
           {/* Left Column: Full Article Content */}
@@ -42,10 +41,15 @@ export default function BlogPostPage({ params }) {
                 <span className="blg-detail__dot">•</span>
                 <span>{post.date}</span>
                 <span className="blg-detail__dot">•</span>
-                <span>👁️ {post.views.toLocaleString("id-ID")} Pembaca</span>
+                <span className="blg-detail__views">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  {post.views.toLocaleString("id-ID")} Pembaca
+                </span>
               </div>
             </div>
-
             {/* Cover Visual */}
             <div className="blg-detail__cover">
               <img
@@ -54,7 +58,6 @@ export default function BlogPostPage({ params }) {
                 alt={post.title}
               />
             </div>
-
             {/* Body Content */}
             <div className="blg-detail__body">
               {post.content.map((p, idx) => (
@@ -62,13 +65,17 @@ export default function BlogPostPage({ params }) {
               ))}
             </div>
           </article>
-
           {/* Right Column: Sidebar */}
           <aside className="blg__sidebar">
             {/* Widget: Artikel Populer */}
             <div className="blg__widget">
               <h3 className="blg__widget-title">
-                <span className="blg__widget-title-icon">📈</span> Artikel Populer
+                <span className="blg__widget-title-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                    <polyline points="16 7 22 7 22 13" />
+                  </svg>
+                </span> Artikel Populer
               </h3>
               <div className="blg__popular-list">
                 {popularPosts.map((pop) => (
@@ -84,7 +91,6 @@ export default function BlogPostPage({ params }) {
                 ))}
               </div>
             </div>
-
             {/* Widget: Promo Banner */}
             <div className="blg__promo-banner">
               <h3 className="blg__promo-title">Gunakan Bibit Kopi Unggul</h3>

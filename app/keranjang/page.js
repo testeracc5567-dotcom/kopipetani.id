@@ -1,15 +1,16 @@
 "use client";
-
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useUI } from "@/context/UIContext";
 import { addOrder } from "@/lib/orders";
-import { addPointHistory, calcPoints, nowStr } from "@/lib/points";
+import { useAddresses } from "@/lib/addresses";
 import { PAYMENTS, findPayment } from "@/lib/payments";
 import { products, rp } from "@/lib/data";
 import ProductCard from "@/components/ProductCard";
+import AddressBook from "@/components/AddressBook";
+import Icon from "@/components/Icon";
 
 export default function KeranjangPage() {
   const {
@@ -19,9 +20,11 @@ export default function KeranjangPage() {
   } = useCart();
   const { user, updateUser, isLoggedIn } = useAuth();
   const { openAuth } = useUI();
+  const addresses = useAddresses();
   const router = useRouter();
   const [promoInput, setPromoInput] = useState("");
   const [promoPlaceholder, setPromoPlaceholder] = useState("Kode promo");
+  const [selectedAddrId, setSelectedAddrId] = useState(null);
 
   const handleApplyPromo = () => {
     const ok = applyPromo(promoInput);
@@ -33,23 +36,25 @@ export default function KeranjangPage() {
 
   const handleCheckout = () => {
     if (Object.keys(groups).length === 0) return;
-
-    // Wajib login dulu buat belanja
     if (!isLoggedIn) {
-      alert("Kamu harus punya akun & login dulu buat belanja ya. 🙏");
+      alert("Kamu harus punya akun & login dulu buat belanja ya.");
       openAuth("daftar");
       return;
     }
-
+    const addr = addresses.find((a) => a.id === selectedAddrId);
+    if (!addr) {
+      alert("Pilih atau tambahkan alamat pengiriman dulu ya.");
+      return;
+    }
     if (!paymentMethod) {
-      alert("Pilih metode pembayaran dulu ya sebelum lanjut. 🙏");
+      alert("Pilih metode pembayaran dulu ya sebelum lanjut.");
       return;
     }
     const pay = findPayment(paymentMethod);
     const items = [];
     Object.values(groups).forEach((arr) =>
       arr.forEach((p) =>
-        items.push({ id: p.id, name: p.name, qty: cart[p.id] || 0, price: p.price, emoji: p.ph?.em || "☕" })
+        items.push({ id: p.id, name: p.name, qty: cart[p.id] || 0, price: p.price, emoji: p.ph?.em || "coffee" })
       )
     );
     addOrder({
@@ -59,9 +64,11 @@ export default function KeranjangPage() {
       discount: promoDisc + voucherDisc,
       total,
       payment: { method: paymentMethod, label: pay ? pay.label : "-" },
+      address: { name: addr.name, phone: addr.phone, detail: addr.detail },
       buyer: user?.name || "Pelanggan",
       buyerId: user?.email || null,
     });
+    updateUser?.({ phone: addr.phone, address: addr.detail });
     checkout();
     router.push("/pesanan");
   };
@@ -75,25 +82,38 @@ export default function KeranjangPage() {
       <div className="cart-head">
         <h1 className="cart-title">Keranjang Belanja Anda</h1>
         <p className="cart-sub">
-          Tinjau pilihanmu, lalu lanjut ke pembayaran. Semua langsung dari petani lokal terbaik. ☕
+          Tinjau pilihanmu, lalu lanjut ke pembayaran. Semua langsung dari petani lokal terbaik.
         </p>
       </div>
-
       {groupNames.length === 0 ? (
         <div className="cart-empty">
-          <span className="cart-empty-em">☕</span>
+          <span className="cart-empty-em">
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="8" cy="21" r="1" />
+              <circle cx="19" cy="21" r="1" />
+              <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+            </svg>
+          </span>
           <p>Keranjang masih kosong. Yuk pilih produk dulu!</p>
         </div>
       ) : (
         <div className="cart-layout">
           <div className="cart-items">
+            <div className="cart-address">
+              <p className="cart-address-title"><Icon name="map-pin" size={16} /> Alamat Pengiriman</p>
+              <AddressBook
+                selectedId={selectedAddrId}
+                onSelect={setSelectedAddrId}
+                defaultForm={{ name: user?.name || "", phone: user?.phone || "", detail: user?.address || "" }}
+              />
+            </div>
             {groupNames.map((gname) => (
               <div key={gname} className="cart-group">
                 <h2 className="cart-group-title">{gname}</h2>
                 {groups[gname].map((p) => (
                   <div key={p.id} className="cart-item">
                     <div className="cart-item-img" style={{ background: p.ph.c }}>
-                      {p.image ? <img src={p.image} alt={p.name} /> : <span>{p.ph.em}</span>}
+                      {p.image ? <img src={p.image} alt={p.name} /> : <Icon name="coffee" size={28} />}
                     </div>
                     <div className="cart-item-info">
                       <span className="cart-item-cat">{p.cat}</span>
@@ -106,7 +126,7 @@ export default function KeranjangPage() {
                       </div>
                     </div>
                     <div className="cart-item-right">
-                      <button className="cart-item-del" onClick={() => removeItem(p.id)} aria-label="Hapus">🗑</button>
+                      <button className="cart-item-del" onClick={() => removeItem(p.id)} aria-label="Hapus"><Icon name="trash" size={16} /></button>
                       <div className="cart-item-price">
                         {rp(p.price * (cart[p.id] || 0))}
                         <span className="cart-item-unit">{p.unit}</span>
@@ -117,7 +137,6 @@ export default function KeranjangPage() {
               </div>
             ))}
           </div>
-
           <aside className="cart-summary">
             <h2 className="cart-summary-title">Ringkasan Pesanan</h2>
             <div className="cart-summary-row"><span>Subtotal</span><span>{rp(subtotal)}</span></div>
@@ -131,7 +150,7 @@ export default function KeranjangPage() {
             <div className="cart-summary-total"><span>Total</span><span>{rp(total)}</span></div>
             <div className="cart-divider" />
             <div className="cart-vouchers">
-              <p className="cart-vouchers-label">🎟️ Pilih Voucher</p>
+              <p className="cart-vouchers-label"><Icon name="ticket" size={16} /> Pilih Voucher</p>
               {vouchers && vouchers.length > 0 ? (
                 <div className="cart-voucher-list">
                   {vouchers.map((v) => (
@@ -147,7 +166,7 @@ export default function KeranjangPage() {
                   ))}
                 </div>
               ) : (
-                <p className="cart-voucher-empty">Belum ada voucher. Tukar poin di Hadiah Member dulu ya! 🎁</p>
+                <p className="cart-voucher-empty">Belum ada voucher. Tukar poin di Hadiah Member dulu ya!</p>
               )}
             </div>
             <div className="cart-promo">
@@ -156,7 +175,7 @@ export default function KeranjangPage() {
             </div>
             <div className="cart-divider" />
             <div className="cart-pay">
-              <p className="cart-pay-label">💳 Metode Pembayaran</p>
+              <p className="cart-pay-label"><Icon name="wallet" size={16} /> Metode Pembayaran</p>
               <div className="cart-pay-list">
                 {PAYMENTS.map((p) => (
                   <button
@@ -164,9 +183,9 @@ export default function KeranjangPage() {
                     className={`cart-pay-opt${paymentMethod === p.id ? " active" : ""}`}
                     onClick={() => setPaymentMethod(p.id)}
                   >
-                    <span className="cart-pay-ic">{p.icon}</span>
+                    <span className="cart-pay-ic"><Icon name={p.icon} size={18} /></span>
                     <span>{p.label}</span>
-                    {paymentMethod === p.id && <span className="cart-pay-check">✓</span>}
+                    {paymentMethod === p.id && <span className="cart-pay-check"><Icon name="check" size={14} /></span>}
                   </button>
                 ))}
               </div>
@@ -196,7 +215,7 @@ export default function KeranjangPage() {
                     </>
                   )}
                   {selectedPay.id === "cod" && (
-                    <p className="cart-pay-detail-title">💵 Bayar tunai saat barang sampai. Siapkan uang pas ya!</p>
+                    <p className="cart-pay-detail-title">Bayar tunai saat barang sampai. Siapkan uang pas ya!</p>
                   )}
                 </div>
               )}
@@ -206,7 +225,6 @@ export default function KeranjangPage() {
           </aside>
         </div>
       )}
-
       {recommendations.length > 0 && (
         <section className="cart-recos">
           <h2 className="cart-recos-title">Rekomendasi untuk Anda</h2>
