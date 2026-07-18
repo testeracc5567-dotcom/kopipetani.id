@@ -24,7 +24,7 @@ export default function Footer() {
           {/* Brand column */}
           <div className="ftr__brand-col">
             <div className="ftr__brand">
-              <Logo tone="dark" size={40} />
+              <Logo tone="light" size={40} />
             </div>
             <p className="ftr__tagline">Dari Hulu ke Cangkir</p>
             <p className="ftr__desc">

@@ -5,12 +5,20 @@ import Icon from "@/components/Icon";
 
 export default function SellerCard({ product }) {
   const router = useRouter();
-  const sellerName = product?.origin || "Penjual KopiPetani";
-  const { online, agoText, isStale, staleDays } = usePresence(sellerName);
 
+  const isStore = !!product?.fromStore;
+  const sellerUid = product?.storeId || null;
+  const sellerName = product?.origin || "Penjual KopiPetani";
+
+  const { online, agoText, isStale, staleDays } = usePresence(
+    isStore ? sellerUid : null
+  );
+
+  // 🔴 Chat pakai UID toko sebagai kunci (biar nyambung ke inbox penjual & presence)
   const openChat = () => {
-    const q = encodeURIComponent(sellerName);
-    router.push(`/chat?seller=${q}&name=${q}`);
+    const key = encodeURIComponent(isStore && sellerUid ? sellerUid : sellerName);
+    const nm = encodeURIComponent(sellerName);
+    router.push(`/chat?seller=${key}&name=${nm}`);
   };
 
   return (
@@ -23,9 +31,15 @@ export default function SellerCard({ product }) {
             <span className="sc-name">{sellerName}</span>
             <span className="sc-verified" title="Penjual terverifikasi"><Icon name="shield" size={14} /></span>
           </div>
-          <span className={`sc-status${online ? " on" : ""}`}>
-            <span className="sc-dot" /> {agoText}
-          </span>
+          {isStore ? (
+            <span className={`sc-status${online ? " on" : ""}`}>
+              <span className="sc-dot" /> {agoText}
+            </span>
+          ) : (
+            <span className="sc-status on">
+              <span className="sc-dot" /> Toko resmi KopiPetani
+            </span>
+          )}
         </div>
       </div>
 
@@ -35,7 +49,7 @@ export default function SellerCard({ product }) {
         <div className="sc-meta-item"><Icon name="package" size={14} /> <span>Respon cepat</span></div>
       </div>
 
-      {isStale && (
+      {isStore && isStale && (
         <div className="sc-stale">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />

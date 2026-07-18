@@ -34,44 +34,53 @@ export default function KeranjangPage() {
     }
   };
 
-  const handleCheckout = () => {
-    if (Object.keys(groups).length === 0) return;
-    if (!isLoggedIn) {
-      alert("Kamu harus punya akun & login dulu buat belanja ya.");
-      openAuth("daftar");
-      return;
-    }
-    const addr = addresses.find((a) => a.id === selectedAddrId);
-    if (!addr) {
-      alert("Pilih atau tambahkan alamat pengiriman dulu ya.");
-      return;
-    }
-    if (!paymentMethod) {
-      alert("Pilih metode pembayaran dulu ya sebelum lanjut.");
-      return;
-    }
-    const pay = findPayment(paymentMethod);
-    const items = [];
-    Object.values(groups).forEach((arr) =>
-      arr.forEach((p) =>
-        items.push({ id: p.id, name: p.name, qty: cart[p.id] || 0, price: p.price, emoji: p.ph?.em || "coffee" })
-      )
-    );
-    addOrder({
-      items,
-      subtotal,
-      logistik,
+  const handleCheckout = async () => {
+  if (Object.keys(groups).length === 0) return;
+  if (!isLoggedIn) {
+    alert("Kamu harus punya akun & login dulu buat belanja ya.");
+    openAuth("daftar");
+    return;
+  }
+  const addr = addresses.find((a) => a.id === selectedAddrId);
+  if (!addr) {
+    alert("Pilih atau tambahkan alamat pengiriman dulu ya.");
+    return;
+  }
+  if (!paymentMethod) {
+    alert("Pilih metode pembayaran dulu ya sebelum lanjut.");
+    return;
+  }
+  const pay = findPayment(paymentMethod);
+  const items = [];
+  Object.values(groups).forEach((arr) =>
+    arr.forEach((p) =>
+      items.push({
+        id: p.id, name: p.name, qty: cart[p.id] || 0, price: p.price,
+        emoji: p.ph?.em || "coffee",
+        sellerId: p.storeId || null,
+        sellerName: p.origin || null,
+      })
+    )
+  );
+  try {
+    await addOrder({
+      items, subtotal, logistik,
       discount: promoDisc + voucherDisc,
       total,
       payment: { method: paymentMethod, label: pay ? pay.label : "-" },
       address: { name: addr.name, phone: addr.phone, detail: addr.detail },
       buyer: user?.name || "Pelanggan",
-      buyerId: user?.email || null,
+      buyerId: user?.uid || null,
+      buyerName: user?.name || "Pelanggan",
+      buyerEmail: user?.email || null,
     });
     updateUser?.({ phone: addr.phone, address: addr.detail });
     checkout();
     router.push("/pesanan");
-  };
+  } catch (e) {
+    alert("Gagal membuat pesanan. Cek koneksi internet ya, lalu coba lagi.");
+  }
+};
 
   const groupNames = Object.keys(groups);
   const recommendations = products.filter((p) => !cart[p.id]).slice(0, 3);

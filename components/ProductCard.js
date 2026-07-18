@@ -1,10 +1,7 @@
 "use client";
-import { useState } from "react";
 import Link from "next/link";
 import { rp } from "@/lib/data";
 import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/context/AuthContext";
-import ChatSellerModal from "@/components/ChatSellerModal";
 import Icon from "@/components/Icon";
 
 function CartIcon() {
@@ -19,14 +16,9 @@ function CartIcon() {
 
 export default function ProductCard({ product }) {
   const { addToCart } = useCart();
-  const { user } = useAuth();
-  const [chatOpen, setChatOpen] = useState(false);
   const rating = product.rating ?? (4.6 + ((product.id * 3) % 5) / 10).toFixed(1);
   const sold = product.sold ?? 50 + ((product.id * 37) % 400);
   const showPhoto = product.image && product.hasPhoto !== false;
-
-  const buyerKey = user?.email || user?.name || "guest";
-  const buyerName = user?.name || "Pembeli";
 
   return (
     <div className="pc">
@@ -62,21 +54,8 @@ export default function ProductCard({ product }) {
             <CartIcon />
             Tambahkan ke Keranjang
           </button>
-          <button className="pc-chat" onClick={() => setChatOpen(true)} title="Chat penjual">
-            <Icon name="send" size={16} />
-          </button>
         </div>
       </div>
-
-      {chatOpen && (
-        <ChatSellerModal
-          sellerKey={product.origin}
-          sellerName={product.origin}
-          buyerKey={buyerKey}
-          buyerName={buyerName}
-          onClose={() => setChatOpen(false)}
-        />
-      )}
     </div>
   );
 }

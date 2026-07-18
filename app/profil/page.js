@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useOrders, STATUS } from "@/lib/orders";
 import { getReviews } from "@/lib/reviews";
 import Icon from "@/components/Icon";
+import { VOUCHERS } from "@/lib/vouchers";
 import { auth } from "@/lib/firebase";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
@@ -336,11 +337,11 @@ useEffect(() => {
                     <span> Poin</span>
                   </p>
                   <p className="prf__points-sub">
-                    Anda dapat menukarkan 5 hadiah!
-                  </p>
-                  <button className="btn prf__points-btn" onClick={() => setActiveTab("hadiah")}>
-                    Tukar Poin
-                  </button>
+  Anda dapat menukarkan {VOUCHERS.filter((v) => points >= v.cost).length} hadiah!
+</p>
+                  <Link href="/member" className="btn prf__points-btn">
+  Tukar Poin
+</Link>
                 </div>
                 <div className="prf__points-right">
                   <div className="prf__exp-box">
@@ -399,43 +400,6 @@ useEffect(() => {
                 <Link href="/produk" className="btn btn-caramel">
                   Belanja Sekarang
                 </Link>
-              </div>
-            </>
-          ) : activeTab === "hadiah" ? (
-            /* Hadiah View */
-            <>
-              <h2 className="prf__section-title">Hadiah Member</h2>
-              <div className="prf__rewards-grid">
-                <div className="prf__reward-card">
-                  <span className="prf__reward-icon">
-                    <Icon name="ticket" size={28} />
-                  </span>
-                  <h4>Voucher Diskon 10%</h4>
-                  <p>Tukarkan 500 poin untuk voucher diskon 10%</p>
-                  <button className="btn btn-ghost" disabled={user.points < 500}>
-                    500 Poin
-                  </button>
-                </div>
-                <div className="prf__reward-card">
-                  <span className="prf__reward-icon">
-                    <Icon name="truck" size={28} />
-                  </span>
-                  <h4>Gratis Ongkir</h4>
-                  <p>Tukarkan 300 poin untuk gratis ongkir</p>
-                  <button className="btn btn-ghost" disabled={user.points < 300}>
-                    300 Poin
-                  </button>
-                </div>
-                <div className="prf__reward-card">
-                  <span className="prf__reward-icon">
-                    <Icon name="coffee" size={28} />
-                  </span>
-                  <h4>Sample Kopi Gratis</h4>
-                  <p>Tukarkan 1000 poin untuk sample kopi premium</p>
-                  <button className="btn btn-ghost" disabled={user.points < 1000}>
-                    1000 Poin
-                  </button>
-                </div>
               </div>
             </>
           ) : (

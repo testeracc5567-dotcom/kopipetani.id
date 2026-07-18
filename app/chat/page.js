@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Icon from "@/components/Icon";
 import { useAuth } from "@/context/AuthContext";
 import { useUI } from "@/context/UIContext";
-import { useBuyerRooms, useMessages, sendMessage, useHeartbeat, usePresence, makeRoomId } from "@/lib/chat";
+import { useBuyerRooms, useMessages, sendMessage, usePresence, makeRoomId } from "@/lib/chat";
 
 function Thread({ room, buyerKey, buyerName }) {
   const messages = useMessages(room.id);
@@ -12,14 +12,12 @@ function Thread({ room, buyerKey, buyerName }) {
   const [text, setText] = useState("");
   const bodyRef = useRef(null);
   useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight; }, [messages]);
-
   const send = (e) => {
     e.preventDefault();
     if (!text.trim()) return;
     sendMessage({ sellerKey: room.sellerKey, sellerName: room.sellerName, buyerKey, buyerName, from: "buyer", text });
     setText("");
   };
-
   return (
     <div className="ct-thread">
       <div className="ct-thread-head">
@@ -31,7 +29,6 @@ function Thread({ room, buyerKey, buyerName }) {
           </span>
         </div>
       </div>
-
       {isStale && (
         <div className="ct-stale">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -45,7 +42,6 @@ function Thread({ room, buyerKey, buyerName }) {
           </span>
         </div>
       )}
-
       <div className="ct-thread-body" ref={bodyRef}>
         {messages.length === 0 ? (
           <p className="chat-empty">Mulai obrolan dengan penjual.</p>
@@ -71,26 +67,20 @@ function ChatInner() {
   const searchParams = useSearchParams();
   const paramSeller = searchParams.get("seller");
   const paramName = searchParams.get("name");
-
-  const buyerKey = user?.email || user?.name || "guest";
+  const buyerKey = user?.uid || null;   // 🔴 pakai uid
   const buyerName = user?.name || "Pembeli";
-  useHeartbeat(isLoggedIn ? buyerKey : null, buyerName);
+  // 🔴 heartbeat sudah global di AuthContext, tidak perlu di sini
   const rooms = useBuyerRooms(isLoggedIn ? buyerKey : null);
-
-  // Room dari tombol "Chat Penjual" (bisa jadi belum ada pesannya)
   const synthetic = paramSeller
     ? { id: makeRoomId(paramSeller, buyerKey), sellerKey: paramSeller, sellerName: paramName || paramSeller }
     : null;
-
   const [activeId, setActiveId] = useState(null);
   useEffect(() => {
     if (synthetic) setActiveId(synthetic.id);
   }, [synthetic?.id]);
-
   const allRooms =
     synthetic && !rooms.some((r) => r.id === synthetic.id) ? [synthetic, ...rooms] : rooms;
   const active = allRooms.find((r) => r.id === activeId) || null;
-
   if (!isLoggedIn) {
     return (
       <main className="ct-wrap">
@@ -102,7 +92,6 @@ function ChatInner() {
       </main>
     );
   }
-
   return (
     <main className="ct-wrap">
       <div className="ct-header">

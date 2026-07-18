@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -9,6 +8,8 @@ const links = [
   { label: "Dashboard", href: "/profil", icon: "dashboard" },
   { label: "Pesanan Saya", href: "/pesanan", icon: "package" },
   { label: "Toko Anda", href: "/toko", icon: "store" },
+  { label: "Pesanan Masuk", href: "/pesanan-toko", icon: "inbox" },
+  { label: "Chat Pembeli", href: "/chat-toko", icon: "send" },
   { label: "Hadiah Member", href: "/member", icon: "gift" },
   { label: "Pengaturan Akun", href: "/profil", icon: "settings" },
 ];

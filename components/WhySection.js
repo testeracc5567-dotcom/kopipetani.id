@@ -1,9 +1,53 @@
+"use client";
+import { useRef, useEffect, useState } from "react";
 import Icon from "@/components/Icon";
 
 export default function WhySection() {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.12 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   return (
-    <section className="why" id="why">
-      <div className="wrap">
+    <section className="why" id="why" ref={ref}>
+      <div className={`wrap why-reveal${inView ? " is-in" : ""}`}>
+        {/* 🔴 Banner ajakan KupAI */}
+        <div className="ai-cta">
+          <div className="ai-cta__left">
+            <span className="ai-cta__icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.9-.9L3 21l1.9-5.6a8.5 8.5 0 0 1-.9-3.9A8.38 8.38 0 0 1 12.5 3a8.38 8.38 0 0 1 8.5 8.5z" />
+              </svg>
+            </span>
+            <div>
+              <b className="ai-cta__title">Bingung mau Belanja atau Menjual?</b>
+              <p className="ai-cta__desc">
+                Santai, nggak usah pusing sendiri! Yuk ngobrol langsung sama KupAI — asisten pintar kami yang siap nemenin & bantuin kamu kapan aja.
+              </p>
+            </div>
+          </div>
+          <button
+            className="ai-cta__btn"
+            onClick={() => window.dispatchEvent(new Event("open-kupai"))}
+          >
+            Ngobrol sama KupAI →
+          </button>
+        </div>
+
         <div className="center">
           <span className="eyebrow">Kenapa KopiPetani</span>
           <h2>Mengapa Pilih KopiPetani.id?</h2>
@@ -12,6 +56,7 @@ export default function WhySection() {
             keberlanjutan, dan manfaat nyata bagi petani lokal.
           </p>
         </div>
+
         <div className="why-cols">
           <div className="why-col">
             <h3>

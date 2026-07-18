@@ -28,6 +28,22 @@ export default function KupaiChat() {
     setMessages((prev) => [...prev, { who: "me", text }]);
   };
 
+  // 🔴 Biar KupAI bisa dibuka dari luar (misal tombol banner "Ngobrol sama KupAI")
+  useEffect(() => {
+    const handler = () => {
+      if (open) return; // sudah kebuka, biarin aja
+      setOpen(true);
+      if (!started) {
+        setStarted(true);
+        botSay(
+          "Halo! Aku <b>KupAI</b>, asisten kopi kamu — dari kebun sampai cangkir. Mau tanya soal belanja kopi, cara seduh, atau tips tanam? Atau mau cerita-cerita dulu juga boleh, aku dengerin kok!"
+        );
+      }
+    };
+    window.addEventListener("open-kupai", handler);
+    return () => window.removeEventListener("open-kupai", handler);
+  }, [open, started]);
+
   const toggle = () => {
     const willOpen = !open;
     setOpen(willOpen);
@@ -94,6 +110,7 @@ export default function KupaiChat() {
         <img className="kup-logo" src="/kupai-logo.svg" alt="KupAI" />
         <span className="lbl">KupAI</span>
       </button>
+
       <div className={"kup-panel" + (open ? " open" : "")}>
         <div className="kup-head">
           <div className="av"><img className="kup-logo" src="/kupai-logo.svg" alt="KupAI" /></div>
@@ -105,6 +122,7 @@ export default function KupaiChat() {
             ×
           </button>
         </div>
+
         <div className="kup-mode">
           <button
             className={mode === "pembeli" ? "active" : ""}
@@ -119,6 +137,7 @@ export default function KupaiChat() {
             Petani
           </button>
         </div>
+
         <div className="kup-body" ref={bodyRef}>
           {messages.map((m, i) =>
             m.who === "bot" ? (
@@ -152,6 +171,7 @@ export default function KupaiChat() {
             </div>
           )}
         </div>
+
         <div className="chips">
           {chipsByMode[mode].map((c) => (
             <button key={c} onClick={() => ask(c)}>
@@ -159,6 +179,7 @@ export default function KupaiChat() {
             </button>
           ))}
         </div>
+
         <div className="kup-input">
           <input
             type="text"

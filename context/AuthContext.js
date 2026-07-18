@@ -1,5 +1,4 @@
 "use client";
-
 import { createContext, useContext, useState, useEffect } from "react";
 import {
   onAuthStateChanged,
@@ -8,11 +7,13 @@ import {
   signOut,
   updateProfile,
   sendPasswordResetEmail,
+  sendEmailVerification,
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { useHeartbeat } from "@/lib/chat";
 
 const AuthContext = createContext(null);
 
@@ -29,8 +30,18 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 🔴 Selama user login, kirim status online (heartbeat) memakai uid.
+  // Otomatis berhenti (offline) saat logout / tutup tab.
+  useHeartbeat(user?.uid, user?.name);
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      // KEAMANAN: sesi yang emailnya belum diverifikasi tidak dianggap login
+      if (fbUser && !fbUser.emailVerified) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
       if (fbUser) {
         let profile = {};
         try {
@@ -40,6 +51,7 @@ export function AuthProvider({ children }) {
         setUser({
           uid: fbUser.uid,
           email: fbUser.email,
+          emailVerified: fbUser.emailVerified,
           name: fbUser.displayName || profile.name || "Pengguna",
           ...DEFAULT_PROFILE,
           ...profile,
@@ -54,6 +66,13 @@ export function AuthProvider({ children }) {
 
   const login = async ({ email, password }) => {
     const cred = await signInWithEmailAndPassword(auth, email, password);
+    // MODE KETAT: wajib verifikasi email dulu
+    if (!cred.user.emailVerified) {
+      await signOut(auth);
+      const err = new Error("Email belum diverifikasi");
+      err.code = "auth/email-not-verified";
+      throw err;
+    }
     return cred.user;
   };
 
@@ -62,6 +81,7 @@ export function AuthProvider({ children }) {
     if (name) {
       try { await updateProfile(cred.user, { displayName: name }); } catch (e) {}
     }
+    // Buat profil di Firestore (masih dalam keadaan login, biar lolos rules)
     const profile = {
       name: name || "Pengguna Baru",
       email,
@@ -74,16 +94,30 @@ export function AuthProvider({ children }) {
       joinDate: new Date().toISOString().split("T")[0],
     };
     try { await setDoc(doc(db, "users", cred.user.uid), profile); } catch (e) {}
-    setUser({ uid: cred.user.uid, ...DEFAULT_PROFILE, ...profile });
+    // Kirim email verifikasi LANGSUNG
+    try { await sendEmailVerification(cred.user); } catch (e) {}
+    // Jangan biarkan masuk sebelum verifikasi
+    await signOut(auth);
     return cred.user;
   };
 
-  // === LOGIN DENGAN GOOGLE ===
+  // Kirim ulang email verifikasi (butuh email + password yang tadi diinput)
+  const resendVerification = async ({ email, password } = {}) => {
+    let u = auth.currentUser;
+    if (!u && email && password) {
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      u = cred.user;
+    }
+    if (!u) throw new Error("no-user");
+    await sendEmailVerification(u);
+    await signOut(auth);
+  };
+
+  // === LOGIN DENGAN GOOGLE (akun Google otomatis terverifikasi) ===
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     const cred = await signInWithPopup(auth, provider);
     const fbUser = cred.user;
-    // Kalau user baru (belum ada profil di Firestore), buatkan profilnya
     const ref = doc(db, "users", fbUser.uid);
     const snap = await getDoc(ref);
     if (!snap.exists()) {
@@ -165,6 +199,7 @@ export function AuthProvider({ children }) {
         isLoading,
         login,
         register,
+        resendVerification,
         loginWithGoogle,
         logout,
         resetPassword,

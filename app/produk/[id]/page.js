@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useUI } from "@/context/UIContext";
 import { useOrders, addOrder, STATUS } from "@/lib/orders";
 import { useProductReviews, addReview } from "@/lib/reviews";
-import { getStoreProductById } from "@/lib/storeProducts";
+import { useStoreProducts } from "@/lib/storeProducts";
 import { PAYMENTS, findPayment } from "@/lib/payments";
 import { useAddresses } from "@/lib/addresses";
 import AddressBook from "@/components/AddressBook";
@@ -34,12 +34,15 @@ export default function ProdukDetailPage() {
   const router = useRouter();
   const id = Number(params?.id);
   const dataProduct = products.find((p) => p.id === id);
+
   const { addToCart, changeQty } = useCart();
   const { user, isLoggedIn, updateUser } = useAuth();
   const { openAuth } = useUI();
-  const orders = useOrders();
+  const orders = useOrders(user?.uid);
   const reviews = useProductReviews(id);
   const addresses = useAddresses();
+  const storeProducts = useStoreProducts();
+
   const [qty, setQty] = useState(1);
   const [tab, setTab] = useState("desc");
   const [rStar, setRStar] = useState(5);
@@ -52,10 +55,23 @@ export default function ProdukDetailPage() {
 
   const [storeProduct, setStoreProduct] = useState(null);
   const [resolved, setResolved] = useState(false);
+
+  // Cari produk toko dari data Firestore (reaktif). Kasih waktu sync dulu
+  // sebelum nyatain "tidak ditemukan".
   useEffect(() => {
-    if (!dataProduct) setStoreProduct(getStoreProductById(id));
-    setResolved(true);
-  }, [id, dataProduct]);
+    if (dataProduct) {
+      setResolved(true);
+      return;
+    }
+    const found = storeProducts.find((p) => String(p.id) === String(id));
+    if (found) {
+      setStoreProduct(found);
+      setResolved(true);
+      return;
+    }
+    const t = setTimeout(() => setResolved(true), 1500);
+    return () => clearTimeout(t);
+  }, [id, dataProduct, storeProducts]);
 
   const product = dataProduct || storeProduct;
 
@@ -77,12 +93,14 @@ export default function ProdukDetailPage() {
     ? (product.stock || 0)
     : 15 + ((product.id * 7) % 40);
   const sold = product.fromStore ? 0 : 50 + ((product.id * 37) % 400);
+
   const rAvg = reviews.length
     ? reviews.reduce((a, r) => a + (r.rating || 0), 0) / reviews.length
     : null;
   const rating = rAvg
     ? rAvg.toFixed(1)
     : (4.6 + ((product.id * 3) % 5) / 10).toFixed(1);
+
   const desc =
     product.desc ||
     `${product.name} adalah ${product.cat.toLowerCase()} pilihan dari ${product.origin}. ` +
@@ -96,7 +114,9 @@ export default function ProdukDetailPage() {
         (it) => Number(it.id ?? it.productId ?? it.pid) === product.id
       )
   );
-  const already = !!user && reviews.some((r) => r.user === user.name);
+  const already =
+    !!user &&
+    reviews.some((r) => r.userId === user.uid || r.user === user.name);
 
   const addQty = () => {
     addToCart(product.id);
@@ -119,7 +139,7 @@ export default function ProdukDetailPage() {
   const logistik = 15000;
   const totalBuy = subtotal + logistik;
 
-  const confirmBuy = () => {
+  const confirmBuy = async () => {
     const addr = addresses.find((a) => a.id === selectedAddrId);
     if (!addr) {
       alert("Pilih atau tambahkan alamat pengiriman dulu ya.");
@@ -130,32 +150,52 @@ export default function ProdukDetailPage() {
       return;
     }
     const pay = findPayment(payMethod);
-    addOrder({
-      items: [{ id: product.id, name: product.name, qty, price: product.price, emoji: product.ph?.em || "coffee" }],
-      subtotal,
-      logistik,
-      discount: 0,
-      total: totalBuy,
-      payment: { method: payMethod, label: pay ? pay.label : "-" },
-      address: { name: addr.name, phone: addr.phone, detail: addr.detail },
-      buyer: user?.name || "Pelanggan",
-      buyerId: user?.email || null,
-    });
-    updateUser?.({ phone: addr.phone, address: addr.detail });
-    setBuyOpen(false);
-    router.push("/pesanan");
+    try {
+      await addOrder({
+        items: [
+          {
+            id: product.id,
+            name: product.name,
+            qty,
+            price: product.price,
+            emoji: product.ph?.em || "coffee",
+            sellerId: product.storeId || null,
+            sellerName: product.origin || null,
+          },
+        ],
+        subtotal,
+        logistik,
+        discount: 0,
+        total: totalBuy,
+        payment: { method: payMethod, label: pay ? pay.label : "-" },
+        address: { name: addr.name, phone: addr.phone, detail: addr.detail },
+        buyer: user?.name || "Pelanggan",
+        buyerId: user.uid,
+        buyerName: user?.name || "Pelanggan",
+        buyerEmail: user?.email || null,
+      });
+      updateUser?.({ phone: addr.phone, address: addr.detail });
+      setBuyOpen(false);
+      router.push("/pesanan");
+    } catch (err) {
+      alert("Gagal membuat pesanan: " + (err?.message || err));
+    }
   };
 
-  const submitReview = (e) => {
+  const submitReview = async (e) => {
     e.preventDefault();
     if (!rText.trim()) return;
-    addReview(product.id, {
-      user: user?.name || "Pengguna",
-      rating: rStar,
-      text: rText.trim(),
-    });
-    setRText("");
-    setRStar(5);
+    try {
+      await addReview(product.id, {
+        user: user?.name || "Pengguna",
+        rating: rStar,
+        text: rText.trim(),
+      });
+      setRText("");
+      setRStar(5);
+    } catch (err) {
+      alert("Gagal mengirim ulasan: " + (err?.message || err));
+    }
   };
 
   return (
@@ -164,6 +204,7 @@ export default function ProdukDetailPage() {
         ← Kembali
       </button>
       <div className="pd-crumb"></div>
+
       <div className="pd-top">
         <div className="pd-gallery">
           <div className="pd-main-img">
@@ -176,6 +217,7 @@ export default function ProdukDetailPage() {
             )}
           </div>
         </div>
+
         <div className="pd-info">
           <span className="pd-badge">{product.cat}</span>
           <h1 className="pd-title">{product.name}</h1>
@@ -185,7 +227,7 @@ export default function ProdukDetailPage() {
             <span className="pd-rate-count">({reviews.length} ulasan)</span>
             <span className="pd-sold">· {sold} terjual</span>
           </div>
-          <p className="pd-origin"><Icon name="map-pin" size={15} /> {product.origin}</p>
+
           <div className="pd-price-row">
             <span className="pd-price-now">{rp(product.price)}</span>
             <span className="pd-unit">{product.unit}</span>
@@ -193,6 +235,7 @@ export default function ProdukDetailPage() {
               <span className="pd-price-old">{rp(product.old)}</span>
             )}
           </div>
+
           <div className="pd-qty-row">
             <span className="pd-qty-label">Jumlah</span>
             <div className="pd-qty">
@@ -202,6 +245,7 @@ export default function ProdukDetailPage() {
             </div>
             <span className="pd-stock">tersisa {stock} stok</span>
           </div>
+
           <div className="pd-actions">
             <button className="pd-btn-cart" onClick={addQty}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -211,25 +255,28 @@ export default function ProdukDetailPage() {
               </svg>
               Masukkan Keranjang
             </button>
-                  <button className="pd-btn-buy" onClick={openBuyNow}>
-        Beli Sekarang
-      </button>
-    </div>
+            <button className="pd-btn-buy" onClick={openBuyNow}>
+              Beli Sekarang
+            </button>
+          </div>
 
-    <div className="pd-seller">
-      <SellerCard product={product} />
-    </div>
-  </div>
-</div>
+          <div className="pd-seller">
+            <SellerCard product={product} />
+          </div>
+        </div>
+      </div>
+
       <div className="pd-tabs">
         <button className={`pd-tab ${tab === "desc" ? "active" : ""}`} onClick={() => setTab("desc")}>Deskripsi</button>
         <button className={`pd-tab ${tab === "rev" ? "active" : ""}`} onClick={() => setTab("rev")}>Ulasan ({reviews.length})</button>
       </div>
+
       {tab === "desc" && (
         <div className="pd-panel">
           <p className="pd-desc">{desc}</p>
         </div>
       )}
+
       {tab === "rev" && (
         <div className="pd-panel">
           <div className="pd-rev-summary">
@@ -239,6 +286,7 @@ export default function ProdukDetailPage() {
               <div className="pd-rev-count">{reviews.length} ulasan</div>
             </div>
           </div>
+
           {already ? (
             <div className="pd-note pd-note-ok">
               <Icon name="check-circle" size={16} /> Kamu sudah memberi ulasan untuk produk ini. Terima kasih!
@@ -260,6 +308,7 @@ export default function ProdukDetailPage() {
               <strong>Selesai</strong>. Selesaikan pesananmu dulu ya!
             </div>
           )}
+
           <div className="pd-rev-list">
             {reviews.length === 0 ? (
               <div className="pd-empty-rev">Belum ada ulasan untuk produk ini.</div>
@@ -335,6 +384,7 @@ export default function ProdukDetailPage() {
                 <div className="buy-total-big">{rp(totalBuy)}</div>
               </div>
             </div>
+
             <button className="buy-pay-now" onClick={confirmBuy}>Bayar Sekarang</button>
           </div>
         </div>

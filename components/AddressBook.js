@@ -2,17 +2,13 @@
 import { useState, useEffect } from "react";
 import Icon from "@/components/Icon";
 import {
-  useAddresses,
-  addAddress,
-  updateAddress,
-  deleteAddress,
-  setDefaultAddress,
+  useAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress,
 } from "@/lib/addresses";
 
 export default function AddressBook({ selectedId, onSelect, defaultForm = {} }) {
   const addresses = useAddresses();
   const [expanded, setExpanded] = useState(false);
-  const [editingId, setEditingId] = useState(null); // "new" | id | null
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", phone: "", detail: "" });
   const [makeDefault, setMakeDefault] = useState(false);
 
@@ -27,7 +23,7 @@ export default function AddressBook({ selectedId, onSelect, defaultForm = {} }) 
 
   const startAdd = () => {
     setForm({ name: defaultForm.name || "", phone: defaultForm.phone || "", detail: defaultForm.detail || "" });
-    setMakeDefault(addresses.length === 0); // alamat pertama otomatis utama
+    setMakeDefault(addresses.length === 0);
     setEditingId("new");
     setExpanded(true);
   };
@@ -45,21 +41,22 @@ export default function AddressBook({ selectedId, onSelect, defaultForm = {} }) 
     setMakeDefault(false);
   };
 
-  const saveForm = () => {
+  const saveForm = async () => {
     if (!form.name.trim() || !form.phone.trim() || !form.detail.trim()) {
       alert("Isi nama penerima, nomor HP, dan alamat lengkap dulu ya.");
       return;
     }
     let targetId;
     if (editingId === "new") {
-      const item = addAddress(form);
+      const item = await addAddress(form);
+      if (!item) { alert("Gagal simpan alamat. Coba login ulang ya."); return; }
       targetId = item.id;
       onSelect?.(item.id);
     } else {
-      updateAddress(editingId, form);
+      await updateAddress(editingId, form);
       targetId = editingId;
     }
-    if (makeDefault) setDefaultAddress(targetId);
+    if (makeDefault) await setDefaultAddress(targetId);
     cancelForm();
   };
 

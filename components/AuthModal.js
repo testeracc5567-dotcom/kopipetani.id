@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useUI } from "@/context/UIContext";
 import { useAuth } from "@/context/AuthContext";
@@ -10,6 +9,7 @@ function mapAuthError(err) {
   if (code.includes("email-already-in-use")) return "Email ini udah terdaftar. Coba Masuk aja ya.";
   if (code.includes("invalid-email")) return "Format email-nya salah.";
   if (code.includes("weak-password")) return "Password minimal 6 karakter.";
+  if (code.includes("email-not-verified")) return "Email kamu belum diverifikasi. Cek inbox/spam & klik link verifikasinya dulu ya.";
   if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found"))
     return "Email atau password salah.";
   if (code.includes("too-many-requests")) return "Kebanyakan percobaan. Tunggu sebentar ya.";
@@ -18,14 +18,21 @@ function mapAuthError(err) {
 
 export default function AuthModal() {
   const { authOpen, authTab, setAuthTab, closeAuth, showOk } = useUI();
-  const { login, register, resetPassword, loginWithGoogle } = useAuth();
+  const { login, register, resendVerification, resetPassword, loginWithGoogle } = useAuth();
   const router = useRouter();
   const isMasuk = authTab === "masuk";
+
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [forgot, setForgot] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+
+  // === Verifikasi email ===
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [needVerify, setNeedVerify] = useState(false);
+  const [pendingCreds, setPendingCreds] = useState(null);
+  const [resendDone, setResendDone] = useState(false);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -35,11 +42,14 @@ export default function AuthModal() {
     return () => document.removeEventListener("keydown", onKey);
   }, [closeAuth]);
 
-  // Reset pesan error & mode lupa-password tiap ganti tab
+  // Reset semua state tiap ganti tab
   useEffect(() => {
     setError("");
     setForgot(false);
     setResetSent(false);
+    setRegisteredEmail("");
+    setNeedVerify(false);
+    setResendDone(false);
   }, [authTab]);
 
   if (!authOpen) return null;
@@ -58,9 +68,11 @@ export default function AuthModal() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setNeedVerify(false);
     const el = e.target.elements;
     const email = el.email.value.trim();
     const password = el.password.value;
+
     if (!isMasuk) {
       const name = el.fullname?.value?.trim();
       const confirm = el.confirm?.value;
@@ -69,7 +81,9 @@ export default function AuthModal() {
       setBusy(true);
       try {
         await register({ name, email, password });
-        finishSuccess(false);
+        setPendingCreds({ email, password });
+        setResendDone(false);
+        setRegisteredEmail(email); // tampilkan layar "cek email"
       } catch (err) {
         setError(mapAuthError(err));
       }
@@ -80,10 +94,30 @@ export default function AuthModal() {
         await login({ email, password });
         finishSuccess(true);
       } catch (err) {
+        const code = err?.code || "";
+        if (code.includes("email-not-verified")) {
+          setNeedVerify(true);
+          setPendingCreds({ email, password });
+          setResendDone(false);
+        }
         setError(mapAuthError(err));
       }
       setBusy(false);
     }
+  };
+
+  // === Kirim ulang email verifikasi ===
+  const handleResend = async () => {
+    if (!pendingCreds) return;
+    setBusy(true);
+    setError("");
+    try {
+      await resendVerification(pendingCreds);
+      setResendDone(true);
+    } catch (err) {
+      setError("Gagal kirim ulang email. Coba masuk lagi ya.");
+    }
+    setBusy(false);
   };
 
   // === RESET PASSWORD (Firebase) ===
@@ -143,6 +177,8 @@ export default function AuthModal() {
   const backToLogin = () => {
     setForgot(false);
     setResetSent(false);
+    setRegisteredEmail("");
+    setNeedVerify(false);
     setError("");
   };
 
@@ -155,6 +191,7 @@ export default function AuthModal() {
         <button className="auth-close" onClick={closeAuth} aria-label="Tutup">
           ×
         </button>
+
         <aside className="auth-side">
           {isMasuk ? (
             <div className="auth-side-inner">
@@ -208,8 +245,38 @@ export default function AuthModal() {
             </div>
           )}
         </aside>
+
         <div className="auth-main">
-          {forgot ? (
+          {registeredEmail ? (
+            <>
+              <h2 className="auth-title">Verifikasi Email Kamu</h2>
+              <p className="auth-sub">
+                Kami sudah mengirim link verifikasi ke <b>{registeredEmail}</b>.
+                Buka email itu, klik link-nya, baru kamu bisa masuk.
+              </p>
+              <div className="auth-reset-done">
+                <p className="auth-sub">
+                  📩 Cek <b>inbox</b> (atau folder <b>spam</b>). Belum masuk juga?
+                </p>
+                {resendDone ? (
+                  <p className="auth-sub">✅ Email verifikasi sudah dikirim ulang.</p>
+                ) : (
+                  <button type="button" className="auth-google" onClick={handleResend} disabled={busy}>
+                    {busy ? "Mengirim..." : "Kirim ulang email verifikasi"}
+                  </button>
+                )}
+                {error && <div className="auth-error">{error}</div>}
+                <button
+                  type="button"
+                  className="auth-submit"
+                  onClick={() => { setRegisteredEmail(""); setAuthTab("masuk"); }}
+                  style={{ marginTop: 16 }}
+                >
+                  Ke Halaman Masuk
+                </button>
+              </div>
+            </>
+          ) : forgot ? (
             <>
               <h2 className="auth-title">Reset Password</h2>
               <p className="auth-sub">
@@ -312,10 +379,26 @@ export default function AuthModal() {
                   </label>
                 )}
                 {error && <div className="auth-error">{error}</div>}
+                {needVerify && (
+                  <button
+                    type="button"
+                    className="auth-google"
+                    onClick={handleResend}
+                    disabled={busy}
+                    style={{ marginTop: 10 }}
+                  >
+                    {resendDone
+                      ? "✅ Email verifikasi terkirim ulang"
+                      : busy
+                      ? "Mengirim..."
+                      : "Kirim ulang email verifikasi"}
+                  </button>
+                )}
                 <button type="submit" className="auth-submit" disabled={busy}>
                   {busy ? "Memproses..." : isMasuk ? "Masuk Sekarang" : "Daftar Sekarang"}
                 </button>
               </form>
+
               <div className="auth-divider">
                 <span>atau lanjut dengan</span>
               </div>

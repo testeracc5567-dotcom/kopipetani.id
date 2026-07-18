@@ -6,20 +6,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useRiwayat, addPointHistory, nowStr } from "@/lib/points";
 import Icon from "@/components/Icon";
+import { VOUCHERS } from "@/lib/vouchers";
 
 const TIERS = [
   { name: "Member Baru", min: 0, icon: "sprout", perk: "Akses dasar & kumpulkan poin dari tiap pesanan" },
   { name: "Bronze", min: 15000, icon: "award", perk: "Voucher belanja hemat & promo khusus member" },
   { name: "Silver", min: 30000, icon: "award", perk: "Voucher lebih besar + gratis ongkir berkala" },
   { name: "Gold", min: 666666, icon: "award", perk: "Semua benefit + voucher eksklusif level tertinggi" },
-];
-
-const VOUCHERS = [
-  { id: 1, off: "50%", title: "Voucher Belanja", desc: "Diskon 50% s/d Rp25.000", cost: 12450 },
-  { id: 2, off: "30%", title: "Voucher Belanja", desc: "Diskon 30% s/d Rp15.000", cost: 8000 },
-  { id: 3, off: "25%", title: "Voucher Ongkir", desc: "Gratis ongkir s/d Rp20.000", cost: 6500 },
-  { id: 4, off: "50%", title: "Voucher Kopi", desc: "Diskon 50% menu kopi", cost: 15000 },
-  { id: 5, off: "20%", title: "Voucher Belanja", desc: "Diskon 20% tanpa min. belanja", cost: 4000 },
 ];
 
 export default function MemberPage() {

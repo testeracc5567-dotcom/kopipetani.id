@@ -66,10 +66,10 @@ function Items({ order }) {
 }
 
 export default function PesananPage() {
-  const orders = useOrders();
   const { user, updateUser, isLoggedIn } = useAuth();
-  const { openAuth } = useUI();
-  const [chat, setChat] = useState(null);
+const { openAuth } = useUI();
+const orders = useOrders(user?.uid);
+const [chat, setChat] = useState(null);
   const [invoiceOrder, setInvoiceOrder] = useState(null);
 
   // Cari nama penjual dari produk pertama di pesanan
@@ -114,11 +114,7 @@ export default function PesananPage() {
     );
   }
 
-  const myKey = user?.email || user?.name || null;
-  const myOrders = orders.filter((o) => {
-    const oKey = o.buyerId || o.buyer || null;
-    return myKey && oKey && oKey === myKey;
-  });
+  const myOrders = orders;
 
   return (
     <div className="prf__layout wrap">

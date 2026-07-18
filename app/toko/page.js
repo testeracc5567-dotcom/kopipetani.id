@@ -385,7 +385,12 @@ export default function TokoPage() {
                 {store.email && <span><Icon name="mail" size={14} /> {store.email}</span>}
                 {store.address && <span><Icon name="map-pin" size={14} /> {store.address}</span>}
               </div>
-              <button className="toko-edit-profil-btn" onClick={startEditStore}><Icon name="edit" size={14} /> Edit Profil</button>
+              <div className="toko-header-actions" style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+  <Link href="/pesanan-toko" className="toko-edit-profil-btn">
+    <Icon name="inbox" size={14} /> Pesanan Masuk
+  </Link>
+  <button className="toko-edit-profil-btn" onClick={startEditStore}>Edit Profil</button>
+</div>
             </div>
           </div>
           <div className="toko-stats">
