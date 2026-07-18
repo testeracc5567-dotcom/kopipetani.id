@@ -1,76 +1,122 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
+import {
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 
 const AuthContext = createContext(null);
 
-const DEFAULT_USER = {
-  name: "Waguri",
-  email: "waguri@email.com",
+const DEFAULT_PROFILE = {
   role: "Pembeli",
   memberLevel: "bronze",
-  points: 1257666,
-  joinDate: "2024-01-15",
+  points: 100,
   avatar: null,
-  phone: "+62 812 3456 7890",
-  address: "Jakarta, Indonesia",
+  phone: "",
+  address: "",
 };
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load user from localStorage on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("kopipetani_user");
-      if (saved) {
-        setUser(JSON.parse(saved));
+    const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        let profile = {};
+        try {
+          const snap = await getDoc(doc(db, "users", fbUser.uid));
+          if (snap.exists()) profile = snap.data();
+        } catch (e) {}
+        setUser({
+          uid: fbUser.uid,
+          email: fbUser.email,
+          name: fbUser.displayName || profile.name || "Pengguna",
+          ...DEFAULT_PROFILE,
+          ...profile,
+        });
+      } else {
+        setUser(null);
       }
-    } catch (e) {
-      // ignore
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    });
+    return () => unsub();
   }, []);
 
-  // Save user to localStorage
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem("kopipetani_user", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("kopipetani_user");
-    }
-  }, [user]);
-
-  const login = (formData) => {
-    const userData = {
-      ...DEFAULT_USER,
-      name: formData.name || DEFAULT_USER.name,
-      email: formData.email || DEFAULT_USER.email,
-    };
-    setUser(userData);
-    return userData;
+  const login = async ({ email, password }) => {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    return cred.user;
   };
 
-  const register = (formData) => {
-    const userData = {
-      ...DEFAULT_USER,
-      name: formData.name || "Pengguna Baru",
-      email: formData.email || DEFAULT_USER.email,
-      points: 100,
+  const register = async ({ name, email, password }) => {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    if (name) {
+      try { await updateProfile(cred.user, { displayName: name }); } catch (e) {}
+    }
+    const profile = {
+      name: name || "Pengguna Baru",
+      email,
+      role: "Pembeli",
       memberLevel: "bronze",
+      points: 100,
+      avatar: null,
+      phone: "",
+      address: "",
       joinDate: new Date().toISOString().split("T")[0],
     };
-    setUser(userData);
-    return userData;
+    try { await setDoc(doc(db, "users", cred.user.uid), profile); } catch (e) {}
+    setUser({ uid: cred.user.uid, ...DEFAULT_PROFILE, ...profile });
+    return cred.user;
   };
 
-  const logout = () => {
-    setUser(null);
+  // === LOGIN DENGAN GOOGLE ===
+  const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    const cred = await signInWithPopup(auth, provider);
+    const fbUser = cred.user;
+    // Kalau user baru (belum ada profil di Firestore), buatkan profilnya
+    const ref = doc(db, "users", fbUser.uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      const profile = {
+        name: fbUser.displayName || "Pengguna Baru",
+        email: fbUser.email,
+        role: "Pembeli",
+        memberLevel: "bronze",
+        points: 100,
+        avatar: fbUser.photoURL || null,
+        phone: "",
+        address: "",
+        joinDate: new Date().toISOString().split("T")[0],
+      };
+      try { await setDoc(ref, profile); } catch (e) {}
+    }
+    return fbUser;
   };
 
-  const updateUser = (updates) => {
-    setUser((prev) => (prev ? { ...prev, ...updates } : null));
+  const logout = async () => {
+    await signOut(auth);
+  };
+
+  // === RESET PASSWORD via email (Firebase bawaan) ===
+  const resetPassword = async (email) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
+  const updateUser = async (updates) => {
+    setUser((prev) => (prev ? { ...prev, ...updates } : prev));
+    if (user?.uid) {
+      try { await updateDoc(doc(db, "users", user.uid), updates); } catch (e) {}
+    }
   };
 
   const isLoggedIn = !!user;
@@ -119,7 +165,9 @@ export function AuthProvider({ children }) {
         isLoading,
         login,
         register,
+        loginWithGoogle,
         logout,
+        resetPassword,
         updateUser,
         memberInfo,
       }}

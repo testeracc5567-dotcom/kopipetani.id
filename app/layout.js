@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import KupaiChat from "@/components/KupaiChat";
 import AuthModal from "@/components/AuthModal";
 import OkModal from "@/components/OkModal";
+import RouteLoader from "@/components/RouteLoader";
 
 export const metadata = {
   title: "KopiPetani — Kopi Segar Langsung dari Petani ke Cangkir",
@@ -23,6 +24,7 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <ShopProvider>
               <CartProvider>
+                <RouteLoader />
                 <Header />
                 {children}
                 <Footer />

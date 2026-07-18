@@ -1,21 +1,24 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Icon from "@/components/Icon";
-import { useChatThread, sendMessage } from "@/lib/chat";
+import { makeRoomId, useMessages, sendMessage, useOnline, useHeartbeat } from "@/lib/chat";
 
-export default function ChatSellerModal({ seller, onClose }) {
-  const thread = useChatThread(seller);
+export default function ChatSellerModal({ sellerKey, sellerName, buyerKey, buyerName, onClose }) {
+  const roomId = makeRoomId(sellerKey, buyerKey);
+  const messages = useMessages(roomId);
+  const online = useOnline(sellerKey);
+  useHeartbeat(buyerKey, buyerName); // biar penjual lihat pembeli online
   const [text, setText] = useState("");
   const bodyRef = useRef(null);
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
-  }, [thread]);
+  }, [messages]);
 
   const send = (e) => {
     e.preventDefault();
     if (!text.trim()) return;
-    sendMessage(seller, text);
+    sendMessage({ sellerKey, sellerName, buyerKey, buyerName, from: "buyer", text });
     setText("");
   };
 
@@ -24,19 +27,21 @@ export default function ChatSellerModal({ seller, onClose }) {
       <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
         <div className="chat-head">
           <div className="chat-head-info">
-            <span className="chat-avatar">{(seller || "P")[0].toUpperCase()}</span>
+            <span className="chat-avatar">{(sellerName || "P")[0].toUpperCase()}</span>
             <div>
-              <p className="chat-seller-name">{seller}</p>
-              <span className="chat-online"><span className="chat-dot" /> Online</span>
+              <p className="chat-seller-name">{sellerName}</p>
+              <span className="chat-online">
+                <span className={`chat-dot${online ? "" : " off"}`} /> {online ? "Online" : "Offline"}
+              </span>
             </div>
           </div>
           <button className="chat-close" onClick={onClose} aria-label="Tutup"><Icon name="x" size={18} /></button>
         </div>
         <div className="chat-body" ref={bodyRef}>
-          {thread.length === 0 ? (
+          {messages.length === 0 ? (
             <p className="chat-empty">Mulai obrolan dengan penjual. Tanya stok, pengiriman, atau produk ya!</p>
           ) : (
-            thread.map((m) => (
+            messages.map((m) => (
               <div key={m.id} className={`chat-msg${m.from === "buyer" ? " chat-msg--me" : ""}`}>
                 <span className="chat-bubble">{m.text}</span>
               </div>

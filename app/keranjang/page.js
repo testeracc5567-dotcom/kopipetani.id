@@ -161,8 +161,13 @@ export default function KeranjangPage() {
                     >
                       <span className="cart-voucher-off">{v.off} OFF</span>
                       <span className="cart-voucher-name">{v.title}</span>
-                      <span className="cart-voucher-code">{v.code}</span>
-                    </button>
+                        <span className="cart-voucher-code">{v.code}</span>
+  {v.expiresAt && (
+    <span className="cart-voucher-exp">
+      Berlaku s/d {new Date(v.expiresAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+    </span>
+  )}
+</button>
                   ))}
                 </div>
               ) : (

@@ -3,19 +3,18 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import AccountSidebar from "@/components/AccountSidebar";
 import Icon from "@/components/Icon";
 
-const STORE_KEY = "kopipetani_store";
 const KATEGORI = ["Ceri Kopi", "Green Bean", "Kopi Sangrai", "Bibit & Benih", "Pupuk & Nutrisi", "Lainnya"];
 const rp = (n) => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
-
 const ICON_CHOICES = ["coffee", "sprout", "leaf", "package", "gift", "star"];
 const prodIcon = (val) => (ICON_CHOICES.includes(val) ? val : "coffee");
-
 const emptyProd = { name: "", price: "", category: KATEGORI[0], stock: "", desc: "", emoji: "coffee", image: "" };
 
-// Resize + kompres foto biar muat di localStorage (anti QuotaExceededError)
+// Resize + kompres foto biar hemat & muat di Firestore
 function compressImage(file, maxSize = 600, quality = 0.7) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -58,27 +57,53 @@ export default function TokoPage() {
   const [editingStore, setEditingStore] = useState(false);
   const [collapsedCats, setCollapsedCats] = useState({});
 
+  // Bersihin sisa data toko lama yang global (dari sistem lama)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORE_KEY);
-      if (saved) setStore(JSON.parse(saved));
-    } catch (e) {}
-    setLoaded(true);
+    try { localStorage.removeItem("kopipetani_store"); } catch (e) {}
   }, []);
 
+  // Ambil toko milik akun yang login (Firestore, per-akun)
   useEffect(() => {
-    if (user?.name) setForm((f) => ({ ...f, owner: f.owner || user.name }));
+    let active = true;
+    const load = async () => {
+      if (!user?.uid) {
+        if (active) { setStore(null); setLoaded(true); }
+        return;
+      }
+      setLoaded(false);
+      try {
+        const snap = await getDoc(doc(db, "users", user.uid, "store", "main"));
+        if (active) setStore(snap.exists() ? snap.data() : null);
+      } catch (e) {
+        if (active) setStore(null);
+      }
+      if (active) setLoaded(true);
+    };
+    load();
+    return () => { active = false; };
+  }, [user?.uid]);
+
+  // Prefill nama & email pemilik dari akun
+  useEffect(() => {
+    if (user) setForm((f) => ({
+      ...f,
+      owner: f.owner || user.name || "",
+      email: f.email || user.email || "",
+    }));
   }, [user]);
 
-  const persist = (next) => {
+  // Simpan / hapus toko ke Firestore (per-akun)
+  const persist = async (next) => {
+    if (!user?.uid) return false;
     try {
-      if (next) localStorage.setItem(STORE_KEY, JSON.stringify(next));
-      else localStorage.removeItem(STORE_KEY);
+      const ref = doc(db, "users", user.uid, "store", "main");
+      if (next) await setDoc(ref, next);
+      else await deleteDoc(ref);
       setStore(next);
       window.dispatchEvent(new Event("store-updated"));
       return true;
     } catch (err) {
-      alert("Penyimpanan browser penuh! Foto produk kegedean. Coba pakai foto yang lebih kecil, atau hapus beberapa produk lama dulu ya. 🙏");
+      alert("Gagal menyimpan toko ke server. Cek koneksi, atau foto produk mungkin kegedean — coba foto yang lebih kecil ya. 🙏");
       return false;
     }
   };
@@ -108,7 +133,6 @@ export default function TokoPage() {
       alert("Gagal memproses foto. Coba foto lain ya.");
     }
   };
-
   const onProdImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -120,10 +144,10 @@ export default function TokoPage() {
     }
   };
 
-  const createStore = (e) => {
+  const createStore = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return;
-    persist({ ...form, name: form.name.trim(), createdAt: new Date().toISOString().split("T")[0], products: [] });
+    await persist({ ...form, name: form.name.trim(), createdAt: new Date().toISOString().split("T")[0], products: [] });
   };
 
   const startEditStore = () => {
@@ -141,10 +165,10 @@ export default function TokoPage() {
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const saveStoreProfile = (e) => {
+  const saveStoreProfile = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return;
-    const ok = persist({
+    const ok = await persist({
       ...store,
       name: form.name.trim(),
       owner: form.owner,
@@ -176,7 +200,7 @@ export default function TokoPage() {
     setProd(emptyProd);
   };
 
-  const submitProduct = (e) => {
+  const submitProduct = async (e) => {
     e.preventDefault();
     if (!prod.name.trim() || !prod.price) return;
     if (editingId) {
@@ -194,7 +218,7 @@ export default function TokoPage() {
             }
           : p
       );
-      if (persist({ ...store, products: updated })) cancelEdit();
+      if (await persist({ ...store, products: updated })) cancelEdit();
     } else {
       const newProduct = {
         id: Date.now(),
@@ -206,14 +230,14 @@ export default function TokoPage() {
         emoji: prod.emoji,
         image: prod.image,
       };
-      if (persist({ ...store, products: [newProduct, ...(store.products || [])] })) setProd(emptyProd);
+      if (await persist({ ...store, products: [newProduct, ...(store.products || [])] })) setProd(emptyProd);
     }
   };
 
-  const deleteProduct = (id) => {
+  const deleteProduct = async (id) => {
     if (!confirm("Hapus produk ini?")) return;
     if (editingId === id) cancelEdit();
-    persist({ ...store, products: store.products.filter((p) => p.id !== id) });
+    await persist({ ...store, products: store.products.filter((p) => p.id !== id) });
   };
 
   // Field form toko (dipakai buat buka toko & edit profil)
@@ -312,7 +336,6 @@ export default function TokoPage() {
 
   // ===== Sudah punya toko: dashboard =====
   const products = store.products || [];
-
   const groupedProducts = (() => {
     const map = {};
     products.forEach((p) => {

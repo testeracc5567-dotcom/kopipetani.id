@@ -1,35 +1,36 @@
 "use client";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { products, rp } from "@/lib/data";
 import { getStoreProducts } from "@/lib/storeProducts";
+import { useAuth } from "@/context/AuthContext";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const CartContext = createContext(null);
-const CART_KEY = "kopipetani_cart";
-const VOUCHER_KEY = "kopipetani_vouchers";
+const VOUCHER_TTL = 7 * 24 * 60 * 60 * 1000; // voucher berlaku 7 hari
 
 export function CartProvider({ children }) {
-  const [cart, setCart] = useState({}); // { [productId]: qty }
+  const { user, isLoading: authLoading } = useAuth();
+  const uid = user?.uid || null;
+
+  const [cart, setCart] = useState({});
   const [promoOn, setPromoOn] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [vouchers, setVouchers] = useState([]);
   const [selectedVoucherId, setSelectedVoucherId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [loaded, setLoaded] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const [storeProducts, setStoreProducts] = useState([]);
   const [toast, setToast] = useState(null);
 
-  // Muat data tersimpan dari browser
-  useEffect(() => {
-    try {
-      const savedCart = localStorage.getItem(CART_KEY);
-      if (savedCart) setCart(JSON.parse(savedCart));
-      const savedV = localStorage.getItem(VOUCHER_KEY);
-      if (savedV) setVouchers(JSON.parse(savedV));
-    } catch (e) {}
-    setLoaded(true);
-  }, []);
+  // Ref buat baca keranjang tamu saat login tanpa memicu reload
+  const cartRef = useRef(cart);
+  cartRef.current = cart;
+  const vouchersRef = useRef(vouchers);
+  vouchersRef.current = vouchers;
+  const loadedUidRef = useRef(undefined);
 
-  // Muat + pantau produk toko dari localStorage
+  // Muat + pantau produk toko
   useEffect(() => {
     const load = () => setStoreProducts(getStoreProducts());
     load();
@@ -41,9 +42,58 @@ export function CartProvider({ children }) {
     };
   }, []);
 
-  // 🔧 FIX BUG: buang otomatis produk yang udah gak ada (mis. produk toko dihapus penjual)
+  // MUAT keranjang & voucher berdasarkan status login
   useEffect(() => {
-    if (!loaded) return;
+    if (authLoading) return;
+    let cancelled = false;
+    setHydrated(false);
+    loadedUidRef.current = undefined;
+
+    (async () => {
+      if (uid) {
+        // === LOGIN: muat dari server, gabung keranjang tamu ===
+        const guestCart = { ...cartRef.current };
+        const guestVouchers = vouchersRef.current || [];
+        let data = null;
+        try {
+          const snap = await getDoc(doc(db, "carts", uid));
+          if (snap.exists()) data = snap.data();
+        } catch (e) {}
+        const serverCart = (data && data.items) || {};
+        const merged = { ...serverCart };
+        Object.keys(guestCart).forEach((id) => {
+          merged[id] = (merged[id] || 0) + guestCart[id];
+        });
+        const serverVouchers = (data && data.vouchers) || [];
+        if (!cancelled) {
+          setCart(merged);
+          setVouchers(serverVouchers.length ? serverVouchers : guestVouchers);
+          setSelectedVoucherId(null);
+          setPromoOn(false);
+        }
+      } else {
+        // === LOGOUT / TAMU: kosong (keranjang milik akun) ===
+        if (!cancelled) {
+          setCart({});
+          setVouchers([]);
+          setSelectedVoucherId(null);
+          setPromoOn(false);
+        }
+      }
+      if (!cancelled) {
+        loadedUidRef.current = uid;
+        setHydrated(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [uid, authLoading]);
+
+  // Buang produk yang sudah tidak ada
+  useEffect(() => {
+    if (!hydrated) return;
     const all = [...products, ...storeProducts];
     setCart((prev) => {
       const next = {};
@@ -54,19 +104,18 @@ export function CartProvider({ children }) {
       });
       return changed ? next : prev;
     });
-  }, [storeProducts, loaded]);
+  }, [storeProducts, hydrated]);
 
-  // Simpan keranjang otomatis
+  // SIMPAN ke server (hanya kalau login). Tamu tidak disimpan.
   useEffect(() => {
-    if (loaded) localStorage.setItem(CART_KEY, JSON.stringify(cart));
-  }, [cart, loaded]);
+    if (!hydrated) return;
+    if (loadedUidRef.current !== uid) return; // cegah simpan data sesi lama
+    if (uid) {
+      setDoc(doc(db, "carts", uid), { items: cart, vouchers }, { merge: true }).catch(() => {});
+    }
+  }, [cart, vouchers, hydrated, uid]);
 
-  // Simpan voucher otomatis
-  useEffect(() => {
-    if (loaded) localStorage.setItem(VOUCHER_KEY, JSON.stringify(vouchers));
-  }, [vouchers, loaded]);
-
-  // Sembunyikan notif otomatis
+  // Notif otomatis hilang
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 2600);
@@ -113,11 +162,16 @@ export function CartProvider({ children }) {
     return false;
   };
 
-  // ===== Voucher =====
+  // ===== Voucher (berlaku 7 hari sejak ditukar) =====
   const addVoucher = (v) => {
     setVouchers((prev) => {
       if (prev.some((x) => x.code === v.code)) return prev;
-      return [...prev, v];
+      const withExp = {
+        ...v,
+        addedAt: v.addedAt || Date.now(),
+        expiresAt: v.expiresAt || Date.now() + VOUCHER_TTL,
+      };
+      return [...prev, withExp];
     });
   };
 
@@ -143,29 +197,32 @@ export function CartProvider({ children }) {
   const openCart = () => setIsOpen(true);
   const closeCart = () => setIsOpen(false);
 
+  // Voucher aktif = yang belum kedaluwarsa
+  const activeVouchers = useMemo(
+    () => vouchers.filter((v) => !v.expiresAt || v.expiresAt > Date.now()),
+    [vouchers]
+  );
+
   const derived = useMemo(() => {
     const all = [...products, ...storeProducts];
     const find = (id) => all.find((x) => String(x.id) === String(id));
     const ids = Object.keys(cart);
-
     const groups = {};
     let count = 0;
     let subtotal = 0;
     let saved = 0;
     ids.forEach((id) => {
       const p = find(id);
-      if (!p) return; // produk udah gak ada → jangan dihitung
+      if (!p) return;
       const qty = cart[id];
       count += qty;
       (groups[p.group] = groups[p.group] || []).push(p);
       subtotal += p.price * qty;
       saved += ((p.old || p.price) - p.price) * qty;
     });
-
     const logistik = subtotal > 0 ? 15000 : 0;
     const promoDisc = promoOn ? Math.round(subtotal * 0.1) : 0;
-
-    const selectedVoucher = vouchers.find((v) => v.id === selectedVoucherId) || null;
+    const selectedVoucher = activeVouchers.find((v) => v.id === selectedVoucherId) || null;
     let voucherDisc = 0;
     if (selectedVoucher && subtotal > 0) {
       const pct = parseFloat(String(selectedVoucher.off).replace("%", "")) || 0;
@@ -182,13 +239,13 @@ export function CartProvider({ children }) {
         ? `Anda hemat ${rp(saved + disc)} dibanding harga pasar biasa`
         : "";
     return { groups, count, subtotal, logistik, promoDisc, voucherDisc, disc, total, saveMsg, selectedVoucher };
-  }, [cart, promoOn, vouchers, selectedVoucherId, storeProducts]);
+  }, [cart, promoOn, activeVouchers, selectedVoucherId, storeProducts]);
 
   const value = {
     cart,
     promoOn,
     isOpen,
-    vouchers,
+    vouchers: activeVouchers,
     selectedVoucherId,
     paymentMethod,
     setPaymentMethod,

@@ -12,6 +12,7 @@ import { getStoreProductById } from "@/lib/storeProducts";
 import { PAYMENTS, findPayment } from "@/lib/payments";
 import { useAddresses } from "@/lib/addresses";
 import AddressBook from "@/components/AddressBook";
+import SellerCard from "@/components/SellerCard";
 import Icon from "@/components/Icon";
 
 function isDone(status) {
@@ -210,12 +211,16 @@ export default function ProdukDetailPage() {
               </svg>
               Masukkan Keranjang
             </button>
-            <button className="pd-btn-buy" onClick={openBuyNow}>
-              Beli Sekarang
-            </button>
-          </div>
-        </div>
-      </div>
+                  <button className="pd-btn-buy" onClick={openBuyNow}>
+        Beli Sekarang
+      </button>
+    </div>
+
+    <div className="pd-seller">
+      <SellerCard product={product} />
+    </div>
+  </div>
+</div>
       <div className="pd-tabs">
         <button className={`pd-tab ${tab === "desc" ? "active" : ""}`} onClick={() => setTab("desc")}>Deskripsi</button>
         <button className={`pd-tab ${tab === "rev" ? "active" : ""}`} onClick={() => setTab("rev")}>Ulasan ({reviews.length})</button>

@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { products, rp } from "@/lib/data";
 import { getStoreProducts } from "@/lib/storeProducts";
 import AccountMenu from "@/components/AccountMenu";
+import Logo from "@/components/Logo";
 
 export default function Header() {
   const { count } = useCart();
@@ -82,19 +82,7 @@ export default function Header() {
           <div className="hdr__inner">
             {/* Brand */}
             <Link href="/" className="hdr__brand">
-              <span className="hdr__logo">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 8h1a4 4 0 1 1 0 8h-1" />
-                  <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" />
-                  <line x1="6" y1="2" x2="6" y2="4" />
-                  <line x1="10" y1="2" x2="10" y2="4" />
-                  <line x1="14" y1="2" x2="14" y2="4" />
-                </svg>
-              </span>
-              <span className="hdr__name">
-                <span className="hdr__name-kopi">Kopi</span>
-                <span className="hdr__name-petani">Petani<span className="brand-id">.id</span></span>
-              </span>
+              <Logo tone="dark" size={40} />
             </Link>
 
             {/* Desktop Nav */}
@@ -162,6 +150,11 @@ export default function Header() {
                 </svg>
                 {count > 0 && <span className="hdr__badge">{count}</span>}
               </Link>
+              <Link href="/chat" className="hdr__icon-btn" aria-label="Chat">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.9-.9L3 21l1.9-5.6a8.5 8.5 0 0 1-.9-3.9A8.38 8.38 0 0 1 12.5 3a8.38 8.38 0 0 1 8.5 8.5z" />
+                </svg>
+              </Link>
               <AccountMenu />
             </div>
 
@@ -187,19 +180,7 @@ export default function Header() {
       <div className={`hdr__mob-drawer${mobileOpen ? " open" : ""}`}>
         <div className="hdr__mob-head">
           <Link href="/" className="hdr__brand" onClick={() => setMobileOpen(false)}>
-            <span className="hdr__logo">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17 8h1a4 4 0 1 1 0 8h-1" />
-                <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" />
-                <line x1="6" y1="2" x2="6" y2="4" />
-                <line x1="10" y1="2" x2="10" y2="4" />
-                <line x1="14" y1="2" x2="14" y2="4" />
-              </svg>
-            </span>
-            <span className="hdr__name">
-              <span className="hdr__name-kopi">Kopi</span>
-              <span className="hdr__name-petani">Petani<span className="brand-id">.id</span></span>
-            </span>
+            <Logo tone="dark" size={34} />
           </Link>
           <button className="hdr__mob-close" onClick={() => setMobileOpen(false)} aria-label="Tutup menu">✕</button>
         </div>
@@ -233,8 +214,13 @@ export default function Header() {
               <circle cx="18" cy="20" r="1.4" />
               <path d="M6 6 5 3H2" />
             </svg>
-            Keranjang
-            {count > 0 && <span className="hdr__badge">{count}</span>}
+            Keranjang {count > 0 && <span className="hdr__badge">{count}</span>}
+          </Link>
+          <Link href="/chat" className="hdr__mob-cart" onClick={() => setMobileOpen(false)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.9-.9L3 21l1.9-5.6a8.5 8.5 0 0 1-.9-3.9A8.38 8.38 0 0 1 12.5 3a8.38 8.38 0 0 1 8.5 8.5z" />
+            </svg>
+            Chat
           </Link>
           {isLoggedIn ? (
             <Link href="/profil" className="hdr__mob-auth" onClick={() => setMobileOpen(false)}>

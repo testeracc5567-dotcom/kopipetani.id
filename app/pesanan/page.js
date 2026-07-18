@@ -69,7 +69,7 @@ export default function PesananPage() {
   const orders = useOrders();
   const { user, updateUser, isLoggedIn } = useAuth();
   const { openAuth } = useUI();
-  const [chatSeller, setChatSeller] = useState(null);
+  const [chat, setChat] = useState(null);
   const [invoiceOrder, setInvoiceOrder] = useState(null);
 
   // Cari nama penjual dari produk pertama di pesanan
@@ -176,7 +176,7 @@ export default function PesananPage() {
                         <Icon name="book-open" size={15} /> Invoice
                       </button>
                       {(o.status === STATUS.PROCESS || o.status === STATUS.SHIPPED) && (
-                        <button className="ord-tool-btn ord-tool-chat" onClick={() => setChatSeller(resolveSeller(o))}>
+                        <button className="ord-tool-btn ord-tool-chat" onClick={() => setChat({ sellerKey: resolveSeller(o), sellerName: resolveSeller(o), buyerKey: user?.email || user?.name || "guest", buyerName: user?.name || "Pembeli" })}>
                           <Icon name="send" size={15} /> Chat Seller
                         </button>
                       )}
@@ -298,7 +298,7 @@ export default function PesananPage() {
         </main>
       </div>
 
-      {chatSeller && <ChatSellerModal seller={chatSeller} onClose={() => setChatSeller(null)} />}
+      {chat && <ChatSellerModal {...chat} onClose={() => setChat(null)} />}
       {invoiceOrder && <InvoiceModal order={invoiceOrder} onClose={() => setInvoiceOrder(null)} />}
     </div>
   );

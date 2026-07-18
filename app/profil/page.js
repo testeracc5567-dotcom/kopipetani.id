@@ -1,11 +1,12 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useOrders, STATUS } from "@/lib/orders";
 import { getReviews } from "@/lib/reviews";
 import Icon from "@/components/Icon";
+import { auth } from "@/lib/firebase";
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
 // Tier disamakan persis dengan halaman Hadiah Member (/member)
 const TIERS = [
@@ -15,32 +16,13 @@ const TIERS = [
   { name: "Gold", min: 666666 },
 ];
 
-// Beautiful SVG Anime Girl Avatar matching the Waguri character design
-function WaguriAvatar() {
-  return (
-    <svg viewBox="0 0 100 100" className="prf__avatar-svg" style={{ width: "100%", height: "100%", borderRadius: "50%" }}>
-      <circle cx="50" cy="50" r="50" fill="#E8DCD1" />
-      <path d="M40 70 L60 70 L55 58 L45 58 Z" fill="#D3C0B0" />
-      <rect x="44" y="55" width="12" height="15" fill="#FFE2D1" />
-      <circle cx="50" cy="45" r="22" fill="#FFE2D1" />
-      <circle cx="36" cy="49" r="3" fill="#FFA5A5" opacity="0.6" />
-      <circle cx="64" cy="49" r="3" fill="#FFA5A5" opacity="0.6" />
-      <ellipse cx="40" cy="44" rx="4" ry="6" fill="#4B3B63" />
-      <ellipse cx="39" cy="42" rx="1.5" ry="2.5" fill="#FFFFFF" />
-      <ellipse cx="60" cy="44" rx="4" ry="6" fill="#4B3B63" />
-      <ellipse cx="59" cy="42" rx="1.5" ry="2.5" fill="#FFFFFF" />
-      <path d="M35 37 Q40 35 44 37" stroke="#3D291C" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-      <path d="M56 37 Q60 35 65 37" stroke="#3D291C" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-      <path d="M47 50 Q50 53 53 50" stroke="#E07A5F" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-      <path d="M22 85 C32 72, 68 72, 78 85 L78 100 L22 100 Z" fill="#422E22" />
-      <path d="M44 70 L50 78 L56 70 Z" fill="#FFE2D1" />
-      <path d="M25 50 C20 30, 80 30, 75 50 C75 60, 78 70, 78 75 C70 70, 30 70, 22 75 C22 70, 25 60, 25 50 Z" fill="#3D405B" />
-      <path d="M28 40 C35 30, 42 34, 45 42 C45 42, 50 30, 55 42 C58 34, 65 30, 72 40 C75 45, 76 52, 76 55 C70 50, 68 45, 66 48 C63 42, 58 45, 57 48 C54 42, 46 45, 43 48 C42 45, 38 50, 30 55 C24 52, 28 45, 28 40 Z" fill="#474A6B" />
-      <path d="M25 45 C23 55, 25 68, 28 72 C30 68, 29 55, 29 45 Z" fill="#3D405B" />
-      <path d="M75 45 C77 55, 75 68, 72 72 C70 68, 71 55, 71 45 Z" fill="#3D405B" />
-      <path d="M35 32 C45 28, 55 28, 65 32 C60 30, 40 30, 35 32 Z" fill="#8185A8" opacity="0.6" />
-    </svg>
-  );
+// Ambil inisial dari nama untuk avatar default (mis. "Awok Awok" -> "AA")
+function getInitials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  const first = parts[0]?.[0] || "";
+  const second = parts[1]?.[0] || "";
+  return (first + second).toUpperCase();
 }
 
 const sidebarLinks = [
@@ -73,6 +55,14 @@ export default function ProfilPage() {
     ).length;
     setReviewCount(count);
   }, [user?.name, user?.email]);
+
+  // Buka langsung tampilan "Level Member" kalau datang dari tombol Lihat Level Lainnya (?tiers=1)
+useEffect(() => {
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tiers") === "1") setShowTiers(true);
+  }
+}, []);
 
   if (isLoading) {
     return (
@@ -123,12 +113,13 @@ export default function ProfilPage() {
   }).length;
 
   const startEdit = () => {
-    setEditForm({ name: user.name, email: user.email, phone: user.phone || "", address: user.address || "" });
+    setEditForm({ name: user.name, email: user.email, phone: user.phone || "" });
     setEditMode(true);
   };
 
-  const saveEdit = () => {
-    updateUser(editForm);
+  const saveEdit = async () => {
+    const { email, ...rest } = editForm; // email tidak diubah (dikelola akun login)
+    await updateUser(rest);
     setEditMode(false);
   };
 
@@ -142,15 +133,11 @@ export default function ProfilPage() {
   };
   const removeAvatar = () => updateUser({ avatar: null });
 
-  // Ubah kata sandi
-  const savePassword = () => {
+  // Ubah kata sandi (Firebase Auth)
+  const savePassword = async () => {
     const oldPw = pwForm.old;
     const newPw = pwForm.new;
     const confirmPw = pwForm.confirm;
-    if (user.password && oldPw !== user.password) {
-      setPwMsg({ type: "error", text: "Kata sandi lama salah." });
-      return;
-    }
     if (newPw.length < 6) {
       setPwMsg({ type: "error", text: "Kata sandi baru minimal 6 karakter." });
       return;
@@ -159,27 +146,33 @@ export default function ProfilPage() {
       setPwMsg({ type: "error", text: "Konfirmasi kata sandi tidak cocok." });
       return;
     }
-    updateUser({ password: newPw });
-    setPwForm({ old: "", new: "", confirm: "" });
-    setPwMode(false);
-    setPwMsg({ type: "ok", text: "Kata sandi berhasil diubah!" });
+    try {
+      const current = auth.currentUser;
+      // Verifikasi sandi lama dulu
+      const cred = EmailAuthProvider.credential(current.email, oldPw);
+      await reauthenticateWithCredential(current, cred);
+      // Ganti sandi baru di server
+      await updatePassword(current, newPw);
+      setPwForm({ old: "", new: "", confirm: "" });
+      setPwMode(false);
+      setPwMsg({ type: "ok", text: "Kata sandi berhasil diubah!" });
+    } catch (err) {
+      let text = "Gagal mengubah kata sandi.";
+      if (err?.code === "auth/wrong-password" || err?.code === "auth/invalid-credential") {
+        text = "Kata sandi lama salah.";
+      } else if (err?.code === "auth/too-many-requests") {
+        text = "Terlalu banyak percobaan. Coba lagi nanti.";
+      } else if (err?.code === "auth/requires-recent-login") {
+        text = "Sesi terlalu lama. Logout lalu login lagi, baru ubah sandi.";
+      }
+      setPwMsg({ type: "error", text });
+    }
   };
 
-  const getInitials = (name) => {
-    return name
-      .split(" ")
-      .map((w) => w[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  // Avatar bisa dipakai ulang (foto / Waguri / inisial)
+  // Avatar: pakai foto kalau ada, kalau nggak tampilkan inisial nama
   const renderAvatar = () =>
     user.avatar ? (
       <img src={user.avatar} alt={user.name} className="prf__avatar-img" />
-    ) : user.name === "Waguri" ? (
-      <WaguriAvatar />
     ) : (
       getInitials(user.name)
     );
@@ -218,7 +211,6 @@ export default function ProfilPage() {
             Logout
           </button>
         </aside>
-
         {/* Main Content */}
         <div className="prf__main">
           {showTiers ? (
@@ -310,8 +302,13 @@ export default function ProfilPage() {
                       <input
                         type="email"
                         value={editForm.email}
-                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                        disabled
+                        title="Email tidak bisa diubah"
+                        style={{ background: "#f4ece2", cursor: "not-allowed", opacity: 0.7 }}
                       />
+                      <small style={{ color: "#7b6a5c", fontSize: "12px" }}>
+                        Email tidak bisa diubah (terhubung ke akun login).
+                      </small>
                     </div>
                     <div className="prf__edit-field">
                       <label>Telepon</label>
@@ -319,14 +316,6 @@ export default function ProfilPage() {
                         type="text"
                         value={editForm.phone}
                         onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      />
-                    </div>
-                    <div className="prf__edit-field">
-                      <label>Alamat</label>
-                      <input
-                        type="text"
-                        value={editForm.address}
-                        onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
                       />
                     </div>
                   </div>
@@ -486,10 +475,6 @@ export default function ProfilPage() {
                     <span className="prf__setting-label">Telepon</span>
                     <span className="prf__setting-value">{user.phone || "-"}</span>
                   </div>
-                  <div className="prf__setting-row">
-                    <span className="prf__setting-label">Alamat</span>
-                    <span className="prf__setting-value">{user.address || "-"}</span>
-                  </div>
                   <button className="btn btn-ghost" onClick={() => { setActiveTab("dashboard"); startEdit(); }}>
                     Edit Informasi
                   </button>
@@ -506,17 +491,15 @@ export default function ProfilPage() {
                     </button>
                   ) : (
                     <div className="prf__pw-form">
-                      {user.password && (
-                        <div className="prf__edit-field">
-                          <label>Kata Sandi Lama</label>
-                          <input
-                            type="password"
-                            value={pwForm.old}
-                            onChange={(e) => setPwForm({ ...pwForm, old: e.target.value })}
-                            placeholder="Masukkan sandi lama"
-                          />
-                        </div>
-                      )}
+                      <div className="prf__edit-field">
+                        <label>Kata Sandi Lama</label>
+                        <input
+                          type="password"
+                          value={pwForm.old}
+                          onChange={(e) => setPwForm({ ...pwForm, old: e.target.value })}
+                          placeholder="Masukkan sandi lama"
+                        />
+                      </div>
                       <div className="prf__edit-field">
                         <label>Kata Sandi Baru</label>
                         <input

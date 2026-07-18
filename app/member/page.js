@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -46,7 +45,6 @@ export default function MemberPage() {
 
   const points = user?.points ?? 0;
   const name = user?.name || "Sahabat Kopi";
-
   let curTier = TIERS[0];
   let nextTier = null;
   for (let i = 0; i < TIERS.length; i++) {
@@ -101,7 +99,6 @@ export default function MemberPage() {
             <span className="mbr-nav-ic"><Icon name="logout" size={18} /></span> Logout
           </button>
         </aside>
-
         <main className="mbr-main">
           <section className="mbr-hero">
             <div className="mbr-hero-left">
@@ -129,16 +126,13 @@ export default function MemberPage() {
               <p className="mbr-hero-card-sub">
                 Teruslah belanja dan tingkatkan level membermu agar berkesempatan dapat voucher dan benefit lainnya.
               </p>
-              <button className="mbr-hero-card-btn" onClick={() => setTab("level")}>Lihat Level Lainnya</button>
+              <button className="mbr-hero-card-btn" onClick={() => router.push("/profil?tiers=1")}>Lihat Level Lainnya</button>
             </div>
           </section>
-
           <div className="mbr-tabs">
             <button className={`mbr-tab${tab === "riwayat" ? " active" : ""}`} onClick={() => setTab("riwayat")}>Riwayat Poin</button>
             <button className={`mbr-tab${tab === "tukar" ? " active" : ""}`} onClick={() => setTab("tukar")}>Tukar Poin</button>
-            <button className={`mbr-tab${tab === "level" ? " active" : ""}`} onClick={() => setTab("level")}>Level Member</button>
           </div>
-
           {tab === "riwayat" && (
             <div className="mbr-table-wrap">
               {history.length === 0 ? (
@@ -163,7 +157,6 @@ export default function MemberPage() {
               )}
             </div>
           )}
-
           {tab === "tukar" && (
             <div className="mbr-vouchers">
               {VOUCHERS.map((v) => (
@@ -181,42 +174,8 @@ export default function MemberPage() {
               ))}
             </div>
           )}
-
-          {tab === "level" && (
-            <div className="mbr-levels">
-              {TIERS.map((t) => {
-                const reached = points >= t.min;
-                const isCurrent = t.name === curTier.name;
-                return (
-                  <div
-                    key={t.name}
-                    className={`mbr-level-card${isCurrent ? " active" : ""}${!reached ? " locked" : ""}`}
-                  >
-                    <span className="mbr-level-badge"><Icon name={t.icon} size={28} /></span>
-                    <div className="mbr-level-info">
-                      <div className="mbr-level-name">{t.name}</div>
-                      <div className="mbr-level-req">
-                        {t.min === 0 ? "Level awal semua member" : `Mulai dari ${t.min.toLocaleString("id-ID")} poin`}
-                      </div>
-                      <div className="mbr-level-perk">{t.perk}</div>
-                    </div>
-                    <span className={`mbr-level-status ${isCurrent ? "current" : reached ? "reached" : "need"}`}>
-                      {isCurrent ? (
-                        "Level Kamu"
-                      ) : reached ? (
-                        <>Tercapai <Icon name="check" size={13} /></>
-                      ) : (
-                        `Butuh ${(t.min - points).toLocaleString("id-ID")} poin`
-                      )}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </main>
       </div>
-
       {selected && (
         <div className="mbr-modal-overlay" onClick={closeRedeem}>
           <div className="mbr-modal" onClick={(e) => e.stopPropagation()}>

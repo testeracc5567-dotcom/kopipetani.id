@@ -1,21 +1,15 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import { rp } from "@/lib/data";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import ChatSellerModal from "@/components/ChatSellerModal";
 import Icon from "@/components/Icon";
 
 function CartIcon() {
   return (
-    <svg
-      className="pc-cart-ico"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg className="pc-cart-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="9" cy="21" r="1" />
       <circle cx="20" cy="21" r="1" />
       <path d="M1 4h3l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 7H6" />
@@ -25,12 +19,14 @@ function CartIcon() {
 
 export default function ProductCard({ product }) {
   const { addToCart } = useCart();
-  const rating =
-    product.rating ?? (4.6 + ((product.id * 3) % 5) / 10).toFixed(1);
+  const { user } = useAuth();
+  const [chatOpen, setChatOpen] = useState(false);
+  const rating = product.rating ?? (4.6 + ((product.id * 3) % 5) / 10).toFixed(1);
   const sold = product.sold ?? 50 + ((product.id * 37) % 400);
-
-  // Ada foto -> tampil foto. Produk toko tanpa foto -> tampil ikon SVG pilihannya.
   const showPhoto = product.image && product.hasPhoto !== false;
+
+  const buyerKey = user?.email || user?.name || "guest";
+  const buyerName = user?.name || "Pembeli";
 
   return (
     <div className="pc">
@@ -61,11 +57,26 @@ export default function ProductCard({ product }) {
           <span className="pc-unit">{product.unit}</span>
           {product.old && <span className="pc-price-old">{rp(product.old)}</span>}
         </div>
-        <button className="pc-btn" onClick={() => addToCart(product.id)}>
-          <CartIcon />
-          Tambahkan ke Keranjang
-        </button>
+        <div className="pc-actions">
+          <button className="pc-btn" onClick={() => addToCart(product.id)}>
+            <CartIcon />
+            Tambahkan ke Keranjang
+          </button>
+          <button className="pc-chat" onClick={() => setChatOpen(true)} title="Chat penjual">
+            <Icon name="send" size={16} />
+          </button>
+        </div>
       </div>
+
+      {chatOpen && (
+        <ChatSellerModal
+          sellerKey={product.origin}
+          sellerName={product.origin}
+          buyerKey={buyerKey}
+          buyerName={buyerName}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </div>
   );
 }
