@@ -59,6 +59,7 @@ export default function PesananTokoPage() {
             <Icon name="inbox" size={22} /> Pesanan Masuk
           </h1>
           <p style={{ color: "#7b6a5c", marginTop: 4 }}>Pesanan dari pembeli untuk produk tokomu. Update otomatis (realtime).</p>
+          <p style={{ color: "#c0392b", fontSize: 12, marginTop: 6 }}>Debug — UID kamu sekarang: {user?.uid || "(belum login)"}</p>
         </div>
 
         {orders.length === 0 ? (

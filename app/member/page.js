@@ -78,8 +78,8 @@ export default function MemberPage() {
       <div className="mbr-shell">
         <aside className="mbr-side">
           <div className="mbr-side-brand">
-            <span className="mbr-side-logo"><Icon name="coffee" size={18} /> Jejak Kopi</span>
-            <span className="mbr-side-tag">Sebuah jejak yang memberi kamu semangat</span>
+            <span className="mbr-side-logo"><Icon name="coffee" size={18} /> KopiPetani.id</span>
+<span className="mbr-side-tag">Kumpulkan poin & tukar hadiah member.</span>
           </div>
           <nav className="mbr-nav">
             {navItems.map((it) => (

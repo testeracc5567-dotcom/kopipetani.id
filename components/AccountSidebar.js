@@ -28,8 +28,8 @@ export default function AccountSidebar() {
     <aside className="prf__sidebar">
       <div className="prf__sidebar-brand">
         <div>
-          <p className="prf__sidebar-title">Jejak Kopi</p>
-          <p className="prf__sidebar-sub">Sebuah jejak yang membantu kamu menjelajahi kopi.</p>
+          <p className="prf__sidebar-title">KopiPetani.id</p>
+          <p className="prf__sidebar-sub">Kelola akun, toko, dan pesananmu di satu tempat.</p>
         </div>
       </div>
       <nav className="prf__sidebar-nav">
